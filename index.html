@@ -2734,6 +2734,7 @@
       ctx.textBaseline = 'middle';
       ctx.fillStyle = colorHex || '#e6dfd5';
       ctx.fillText(text, 32, 34);
+      const tex = new THREE.CanvasTexture(canvas);
       const mat = new THREE.MeshBasicMaterial({
         map: tex,
         transparent: true,
