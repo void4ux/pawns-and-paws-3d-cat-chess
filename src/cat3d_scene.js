@@ -27,6 +27,7 @@
     const squareMeshesMap = {};
     const catRigsBySquare = {};
     const activeSparkleBursts = [];
+    const activeClawSlashEffects = [];
 
     const animatedTreesList = [];
     const procTexCache = {};
@@ -387,7 +388,7 @@
       desiredTarget: new THREE.Vector3(0, 0.1, 0),
       lerpSpeed: 0.13,
       isOrtho: false,
-      followMoves: false,
+      followMoves: true,
       savedPreCapture: null,
       isDragging: false,
       isPanning: false,
@@ -2724,6 +2725,59 @@
       activeSparkleBursts.push({ startTime: performance.now(), particles });
     }
 
+    // Dynamic 3D Golden Claw Slash Effect (triple curved claw strikes /// + impact flash)
+    function spawnAttackClawSlashEffect(targetWorldPos, dirX, dirZ) {
+      if (!fxSparklesGroup3d) return;
+      const slashGroup = new THREE.Group();
+      slashGroup.position.copy(targetWorldPos);
+      slashGroup.position.y += 0.38;
+
+      const strikeAngle = (Math.abs(dirX) + Math.abs(dirZ) > 0.01) ? Math.atan2(dirX, dirZ) : 0;
+      slashGroup.rotation.y = strikeAngle;
+
+      const clawMat = new THREE.MeshBasicMaterial({
+        color: 0xffd700,
+        transparent: true,
+        opacity: 0.95,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+
+      // 3 sharp golden claw slash streaks ///
+      const offsets = [-0.18, 0, 0.18];
+      offsets.forEach((ox, idx) => {
+        const slashGeo = new THREE.CylinderGeometry(0.008, 0.038, 0.85, 6);
+        const slashMesh = new THREE.Mesh(slashGeo, clawMat);
+        slashMesh.position.set(ox, 0.15, (idx - 1) * 0.06);
+        slashMesh.rotation.z = 0.58;
+        slashMesh.rotation.x = 0.35;
+        slashGroup.add(slashMesh);
+      });
+
+      const flashGeo = new THREE.CircleGeometry(0.42, 16);
+      const flashMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.88,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      const flashMesh = new THREE.Mesh(flashGeo, flashMat);
+      flashMesh.rotation.x = -Math.PI / 2;
+      slashGroup.add(flashMesh);
+
+      fxSparklesGroup3d.add(slashGroup);
+      activeClawSlashEffects.push({
+        group: slashGroup,
+        startTime: performance.now(),
+        duration: 380,
+        clawMat,
+        flashMat
+      });
+    }
+
     // Cleanly dispose piece rig geometry and materials from WebGL VRAM
     function disposeRig(rig) {
       if (!rig) return;
@@ -2959,14 +3013,14 @@
       spawnPawPrintTrailOnBoard(fromPos, toPos);
 
       // Every move (normal moves AND captures) uses the 3D POV camera transition when style !== 'minimal'
-      const use3DPovTransition = (style !== 'minimal' && camState.followMoves);
-      // Responsive, snappy move animation (220-440ms) so moves feel crisp, tactile, and non-laggy!
+      const use3DPovTransition = (style !== 'minimal' && camState.followMoves !== false);
+      // Snappy yet cinematic duration so the player sees the cat coil, pounce across tiles, and strike!
       let baseDuration = isCapture
-        ? (style === 'cinematic' ? 440 : (style === 'quick' ? 320 : 260))
-        : (style === 'cinematic' ? 360 : (style === 'quick' ? 280 : 220));
-      baseDuration = Math.max(160, baseDuration / speedMult);
+        ? (style === 'cinematic' ? 960 : (style === 'quick' ? 700 : 860))
+        : (style === 'cinematic' ? 740 : (style === 'quick' ? 520 : 640));
+      baseDuration = Math.max(260, baseDuration / speedMult);
 
-      // AUTOMATIC OVERHEAD -> 3D LOW-ANGLE POV TRANSITION ON EVERY MOVE & ATTACK!
+      // AUTOMATIC OVER-THE-SHOULDER 3D ACTION POV ON EVERY MOVE & ATTACK!
       if (use3DPovTransition) {
         if (!camState.savedPreCapture) {
           camState.savedPreCapture = {
@@ -2977,15 +3031,29 @@
           };
         }
 
-        // Focus along the move trajectory and swoop camera into the 3D low-angle POV
-        const midPoint = new THREE.Vector3().lerpVectors(fromPos, toPos, 0.62);
-        midPoint.y = 0.42;
-        camState.desiredTarget.copy(midPoint);
+        // Calculate over-the-shoulder POV behind the moving cat, angled along the move vector
+        const dirX = toPos.x - fromPos.x;
+        const dirZ = toPos.z - fromPos.z;
+        const moveDist = Math.hypot(dirX, dirZ);
 
-        const sideSign = toPos.x >= 0 ? -0.55 : 0.55;
-        camState.desiredTheta = (appState.boardFlipped ? Math.PI : 0) + sideSign;
-        camState.desiredPhi = isCapture ? 1.12 : 1.06;   // Low-angle 3D perspective showing full 3D cats & trees
-        camState.desiredRadius = isCapture ? 6.8 : 7.4;  // Dynamic 3D action framing
+        // Vector from target back towards camera: directly behind the moving cat (-dirX, -dirZ)
+        let povTheta = (Math.abs(dirX) + Math.abs(dirZ) > 0.05)
+          ? Math.atan2(-dirX, -dirZ)
+          : (appState.boardFlipped ? Math.PI : 0);
+
+        // Look-at target: focused forward on target square / defending piece
+        const lookTarget = new THREE.Vector3(
+          toPos.x * 0.75 + fromPos.x * 0.25,
+          isCapture ? 0.45 : 0.35,
+          toPos.z * 0.75 + fromPos.z * 0.25
+        );
+        camState.desiredTarget.copy(lookTarget);
+        camState.desiredTheta = povTheta;
+        // Low-angle perspective matching the reference screenshot!
+        camState.desiredPhi = isCapture ? 1.30 : 1.26;
+        // Dynamic close-in radius framing the cat and target pieces
+        camState.desiredRadius = Math.min(5.6, Math.max(3.2, moveDist * 0.85 + 1.8));
+        camState.lerpSpeed = 0.22; // Snappy, exciting camera swoop
 
         const banner = document.getElementById('hud-capture-banner');
         if (banner) {
@@ -3024,12 +3092,12 @@
       };
     }
 
-    // 1-Click Live Demo of the Overhead -> 3D Attack Camera Transition!
+    // 1-Click Live Demo of the Over-The-Shoulder Action POV Attack!
     function triggerDemoAttackTransition() {
       if (activeMoveAnim || !piecesGroup3d) return;
       ensureAudioContext();
 
-      // Find any two pieces on the board to showcase the Overhead -> 3D Pounce Transition
+      // Find any two pieces on the board to showcase the Action POV attack
       const keys = Object.keys(catRigsBySquare);
       const whiteSq = keys.find((sq) => catRigsBySquare[sq]?.userData?.color === 'w') || 'e2';
       const blackSq = keys.find((sq) => catRigsBySquare[sq]?.userData?.color === 'b') || 'e7';
@@ -3048,16 +3116,25 @@
         target: camState.desiredTarget.clone()
       };
 
-      const midPoint = new THREE.Vector3().lerpVectors(fromPos, toPos, 0.65);
-      midPoint.y = 0.42;
-      camState.desiredTarget.copy(midPoint);
-      camState.desiredTheta = 0.52;
-      camState.desiredPhi = 1.12;
-      camState.desiredRadius = 6.6;
+      const dirX = toPos.x - fromPos.x;
+      const dirZ = toPos.z - fromPos.z;
+      const moveDist = Math.hypot(dirX, dirZ);
+      const povTheta = (Math.abs(dirX) + Math.abs(dirZ) > 0.05) ? Math.atan2(-dirX, -dirZ) : 0;
+
+      const lookTarget = new THREE.Vector3(
+        toPos.x * 0.75 + fromPos.x * 0.25,
+        0.45,
+        toPos.z * 0.75 + fromPos.z * 0.25
+      );
+      camState.desiredTarget.copy(lookTarget);
+      camState.desiredTheta = povTheta;
+      camState.desiredPhi = 1.30;
+      camState.desiredRadius = Math.min(5.4, Math.max(3.2, moveDist * 0.85 + 1.8));
+      camState.lerpSpeed = 0.22;
 
       const banner = document.getElementById('hud-capture-banner');
       if (banner) {
-        banner.textContent = '🎬 Overhead ➔ 3D Attack Camera Transition!';
+        banner.textContent = '🎬 Action POV: Cat Pounce & Claw Strike!';
         banner.classList.remove('hidden');
       }
       playSoundEffect('captureStart');
@@ -3072,9 +3149,9 @@
         isCapture: true,
         impactPlayed: false,
         startTime: performance.now(),
-        duration: 1550,
+        duration: 1100,
         onComplete: () => {
-          showToast('🎯 Camera smoothly returned to Overhead View!');
+          showToast('🎯 Camera smoothly returned to Overview!');
         }
       };
     }
@@ -3466,65 +3543,110 @@
         }
       });
 
-      // 4. Process Active Move & 3-Phase Attack Camera Choreography (Reference 3: 1000756618.jpg!)
+      // 4. Process Active Move & Multi-Phase Action POV Choreography
       if (activeMoveAnim) {
         const elapsed = nowMs - activeMoveAnim.startTime;
         const rawT = Math.min(1, elapsed / activeMoveAnim.duration);
         const { attackerRig, defenderRig, rookRig, rookFromPos, rookToPos, fromPos, toPos, moveObj, isCapture } = activeMoveAnim;
 
-        // For all moves with 3D POV transition, let the camera swoop down into the 3D POV during the first 16%,
-        // perform the 4-legged cat leap/stride from t=0.16 to t=0.82, and smoothly return to overhead!
-        let moveT = rawT;
-        if (camState.savedPreCapture) {
-          if (rawT < 0.16) moveT = 0;
-          else if (rawT > 0.82) moveT = 1;
-          else moveT = (rawT - 0.16) / 0.66;
-        }
-        const easeT = moveT < 0.5 ? 2 * moveT * moveT : 1 - Math.pow(-2 * moveT + 2, 2) / 2;
-
-        // Orient cat toward target square
         const dx = toPos.x - fromPos.x;
         const dz = toPos.z - fromPos.z;
+
+        // Orient cat toward target square
         if (Math.abs(dx) + Math.abs(dz) > 0.01) {
           attackerRig.rotation.y = Math.atan2(dx, dz);
         }
 
-        // Parabolic leap height (agile hop on normal moves, higher pounce on captures/knights)
-        let arcHeight = moveObj.piece === 'n' ? 1.55 : (isCapture ? 0.92 : 0.58);
-        attackerRig.position.lerpVectors(fromPos, toPos, easeT);
-        attackerRig.position.y = Math.sin(moveT * Math.PI) * arcHeight;
-
-        // Reference 3 (1000756618.jpg): Stretch cat body into a full 4-legged mid-air pounce with outstretched front paws!
-        if (attackerRig.userData.bodyGroup) {
-          const leapStretch = Math.sin(moveT * Math.PI);
-          attackerRig.userData.bodyGroup.scale.set(1 - leapStretch * 0.12, 1 - leapStretch * 0.18, 1 + leapStretch * 0.46);
-          attackerRig.userData.bodyGroup.rotation.x = (moveT - 0.5) * 0.65;
+        if (rawT < 0.18) {
+          // PHASE 1: Anticipation / Crouch / Body Coil
+          const coilT = rawT / 0.18;
+          const coilDip = Math.sin(coilT * Math.PI) * 0.12;
+          attackerRig.position.copy(fromPos);
+          attackerRig.position.y = -coilDip;
+          if (attackerRig.userData.bodyGroup) {
+            attackerRig.userData.bodyGroup.scale.set(1.08, 0.76, 1.15);
+            attackerRig.userData.bodyGroup.rotation.x = -0.15;
+          }
+          if (attackerRig.userData.tailGroup) {
+            attackerRig.userData.tailGroup.rotation.z = Math.sin(nowMs * 0.035) * 0.65;
+          }
           if (attackerRig.userData.frontLegsGroup) {
-            attackerRig.userData.frontLegsGroup.rotation.x = -leapStretch * 0.85;
+            attackerRig.userData.frontLegsGroup.rotation.x = 0.22;
+          }
+        } else if (rawT < 0.76) {
+          // PHASE 2: Airborne Pounce Arc with Outstretched Front Paws
+          const pounceT = (rawT - 0.18) / 0.58;
+          const easeT = pounceT < 0.5 ? 2 * pounceT * pounceT : 1 - Math.pow(-2 * pounceT + 2, 2) / 2;
+          const arcHeight = moveObj.piece === 'n' ? 1.65 : (isCapture ? 1.05 : 0.65);
+          attackerRig.position.lerpVectors(fromPos, toPos, easeT);
+          attackerRig.position.y = Math.sin(pounceT * Math.PI) * arcHeight;
+
+          if (attackerRig.userData.bodyGroup) {
+            const stretch = Math.sin(pounceT * Math.PI);
+            attackerRig.userData.bodyGroup.scale.set(1 - stretch * 0.14, 1 - stretch * 0.20, 1 + stretch * 0.46);
+            attackerRig.userData.bodyGroup.rotation.x = (pounceT - 0.5) * 0.72;
+          }
+          if (attackerRig.userData.frontLegsGroup) {
+            attackerRig.userData.frontLegsGroup.rotation.x = -Math.sin(pounceT * Math.PI) * 1.05;
+          }
+          if (attackerRig.userData.tailGroup) {
+            attackerRig.userData.tailGroup.rotation.z = -0.25;
+          }
+          if (rookRig && rookFromPos && rookToPos) {
+            rookRig.position.lerpVectors(rookFromPos, rookToPos, easeT);
+          }
+        } else {
+          // PHASE 3: Landing / Claw Slash Strike / Impact Reaction
+          attackerRig.position.copy(toPos);
+          const landT = (rawT - 0.76) / 0.24;
+
+          if (isCapture) {
+            if (!activeMoveAnim.impactPlayed) {
+              activeMoveAnim.impactPlayed = true;
+              playSoundEffect('captureImpact');
+              spawnCaptureSparkleBurst(toPos, '#fde047');
+              spawnAttackClawSlashEffect(toPos, dx, dz);
+            }
+            // Dynamic camera micro-shake on claw impact
+            if (landT < 0.45) {
+              const shake = (0.45 - landT) * 0.14;
+              camState.target.x += (Math.random() - 0.5) * shake;
+              camState.target.y += (Math.random() - 0.5) * shake;
+            }
+            // Attacker right paw claw swipe
+            if (attackerRig.userData.legRGroup) {
+              attackerRig.userData.legRGroup.rotation.x = Math.sin(landT * Math.PI) * 1.35;
+            }
+            // Defender cat knockback tumble, spin & poof
+            if (defenderRig) {
+              const defT = Math.min(1, landT * 1.4);
+              defenderRig.rotation.y += 0.55;
+              defenderRig.position.y = defT * 0.85;
+              defenderRig.position.x = toPos.x + (dx !== 0 ? Math.sign(dx) * defT * 0.35 : 0);
+              defenderRig.position.z = toPos.z + (dz !== 0 ? Math.sign(dz) * defT * 0.35 : 0);
+              defenderRig.scale.setScalar(Math.max(0.01, 1 - defT));
+            }
+            if (attackerRig.userData.bodyGroup) {
+              const squash = Math.sin(landT * Math.PI) * 0.22;
+              attackerRig.userData.bodyGroup.scale.set(1 + squash, 1 - squash, 1);
+              attackerRig.userData.bodyGroup.rotation.x = 0;
+            }
+          } else {
+            // Normal move landing squash and recovery
+            const squash = Math.sin(landT * Math.PI) * 0.26;
+            if (attackerRig.userData.bodyGroup) {
+              attackerRig.userData.bodyGroup.scale.set(1 + squash, 1 - squash, 1);
+              attackerRig.userData.bodyGroup.rotation.x = 0;
+            }
+            if (attackerRig.userData.frontLegsGroup) {
+              attackerRig.userData.frontLegsGroup.rotation.x = 0;
+            }
           }
         }
 
-        if (rookRig && rookFromPos && rookToPos) {
-          rookRig.position.lerpVectors(rookFromPos, rookToPos, easeT);
-        }
-
-        // Impact Frame & Cute Defender Spin/Sparkle Reaction
-        if (isCapture && moveT >= 0.55) {
-          if (!activeMoveAnim.impactPlayed) {
-            activeMoveAnim.impactPlayed = true;
-            playSoundEffect('captureImpact');
-            spawnCaptureSparkleBurst(toPos, '#fde047');
-          }
-          if (defenderRig) {
-            const defT = Math.min(1, (moveT - 0.55) / 0.45);
-            defenderRig.rotation.y += 0.42;
-            defenderRig.position.y = defT * 0.75;
-            defenderRig.scale.setScalar(Math.max(0.01, 1 - defT));
-          }
-        }
-
-        // Return Camera Smoothly to Overhead View at end of attack
+        // Return Camera Smoothly to saved overview view at end of move
         if (rawT >= 0.84 && camState.savedPreCapture) {
+          camState.lerpSpeed = 0.13;
           camState.desiredTheta = camState.savedPreCapture.theta;
           camState.desiredPhi = camState.savedPreCapture.phi;
           camState.desiredRadius = camState.savedPreCapture.radius;
@@ -3537,6 +3659,17 @@
           activeMoveAnim = null;
           const banner = document.getElementById('hud-capture-banner');
           if (banner) banner.classList.add('hidden');
+          // Reset rig transform offsets
+          if (attackerRig.userData.bodyGroup) {
+            attackerRig.userData.bodyGroup.scale.set(1, 1, 1);
+            attackerRig.userData.bodyGroup.rotation.set(0, 0, 0);
+          }
+          if (attackerRig.userData.frontLegsGroup) {
+            attackerRig.userData.frontLegsGroup.rotation.set(0, 0, 0);
+          }
+          if (attackerRig.userData.legRGroup) {
+            attackerRig.userData.legRGroup.rotation.set(0, 0, 0);
+          }
           sync3DPiecesWithChessState();
           if (cb) cb();
         }
@@ -3597,6 +3730,25 @@
             m.material.opacity = 1 - age;
             m.rotation.x += 0.14;
           });
+        }
+      }
+
+      for (let i = activeClawSlashEffects.length - 1; i >= 0; i--) {
+        const fx = activeClawSlashEffects[i];
+        const age = (nowMs - fx.startTime) / fx.duration;
+        if (age >= 1) {
+          fxSparklesGroup3d.remove(fx.group);
+          fx.group.traverse((c) => {
+            if (c.geometry) c.geometry.dispose();
+          });
+          if (fx.clawMat) fx.clawMat.dispose();
+          if (fx.flashMat) fx.flashMat.dispose();
+          activeClawSlashEffects.splice(i, 1);
+        } else {
+          const scale = 1 + age * 0.45;
+          fx.group.scale.set(scale, scale, scale);
+          fx.clawMat.opacity = Math.max(0, 1 - Math.pow(age, 1.8));
+          fx.flashMat.opacity = Math.max(0, 1 - age * 2.2);
         }
       }
 

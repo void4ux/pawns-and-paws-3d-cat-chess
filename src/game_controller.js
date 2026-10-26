@@ -1155,6 +1155,13 @@
         camState.playMode = 'diorama3d';
         camState.desiredPhi = 1.15;
         camState.desiredRadius = 7.4;
+      } else if (preset === 'actionPov') {
+        camState.playMode = 'diorama3d';
+        camState.desiredTheta = (typeof appState !== 'undefined' && appState.boardFlipped) ? Math.PI : 0;
+        camState.desiredPhi = 1.28;
+        camState.desiredRadius = 6.4;
+        camState.desiredTarget.set(0, 0.45, -0.6);
+        showToast('🎥 Action POV enabled');
       }
     }
 
@@ -1169,11 +1176,17 @@
 
     function toggleCameraFollow() {
       camState.followMoves = !camState.followMoves;
-      const btn = document.getElementById('btn-cam-follow');
-      if (btn) {
-        btn.textContent = `Follow: ${camState.followMoves ? 'ON' : 'OFF'}`;
+      const btns = [
+        document.getElementById('btn-cam-follow'),
+        document.getElementById('btn-pov-cam-toggle')
+      ];
+      btns.forEach((btn) => {
+        if (!btn) return;
+        btn.textContent = `🎥 Action POV: ${camState.followMoves ? 'ON' : 'OFF'}`;
         btn.classList.toggle('text-[#629924]', camState.followMoves);
-      }
+        btn.classList.toggle('bg-[#629924]/20', camState.followMoves);
+      });
+      showToast(`Action POV: ${camState.followMoves ? 'ON' : 'OFF'}`);
       playSoundEffect('click');
     }
 

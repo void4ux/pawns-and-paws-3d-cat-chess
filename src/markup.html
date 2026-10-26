@@ -554,6 +554,16 @@
             </div>
           </div>
 
+          <!-- Floating Action POV controls in 3D Viewport -->
+          <div class="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-10">
+            <button id="btn-pov-cam-toggle" onclick="toggleCameraFollow()" class="px-2.5 py-1 rounded-full bg-black/80 hover:bg-black/95 text-[#81b64c] border border-[#81b64c]/40 text-[11px] font-bold shadow-md transition flex items-center gap-1 cursor-pointer" title="Toggle dynamic Action POV camera on moves & attacks">
+              🎥 Action POV: ON
+            </button>
+            <button id="btn-pov-demo-attack" onclick="triggerDemoAttackTransition()" class="px-2.5 py-1 rounded-full bg-[#81b64c] hover:bg-[#8ecb53] text-[#1c1a17] font-extrabold text-[11px] shadow-md transition flex items-center gap-1 cursor-pointer" title="Preview cinematic POV attack animation">
+              ⚡ Test POV
+            </button>
+          </div>
+
           <div id="hud-selected-cat" class="hidden">
             <span id="selected-cat-title">White Cat</span>
             <span id="selected-cat-sq">E2</span>
@@ -1377,13 +1387,14 @@
   <div class="hidden">
     <div id="camera-toolbar">
       <button id="btn-cam-top" onclick="setCameraPreset('top')">Top</button>
+      <button id="btn-cam-actionpov" onclick="setCameraPreset('actionPov')">Action POV</button>
       <button id="btn-cam-white" onclick="setCameraPreset('white')">White POV</button>
       <button id="btn-cam-black" onclick="setCameraPreset('black')">Black POV</button>
       <button id="btn-cam-side" onclick="setCameraPreset('side')">Side</button>
       <button id="btn-cam-closeup" onclick="setCameraPreset('closeup')">Close-Up</button>
       <button id="btn-cam-reset" onclick="resetCameraView()">↺ Reset</button>
       <button id="btn-cam-proj" onclick="toggleCameraProjection()">Persp</button>
-      <button id="btn-cam-follow" onclick="toggleCameraFollow()">Follow: OFF</button>
+      <button id="btn-cam-follow" onclick="toggleCameraFollow()">Follow: ON</button>
       <button id="btn-zoom-in" onclick="zoomCameraStep(-1.2)">+</button>
       <button id="btn-zoom-out" onclick="zoomCameraStep(1.2)">−</button>
       <button id="btn-orbit-left" onclick="orbitCameraStep(-0.35)">⟲</button>
