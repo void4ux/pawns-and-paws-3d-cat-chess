@@ -554,6 +554,16 @@
             </div>
           </div>
 
+          <!-- Camera Mode: 🔒 Lock vs 🔓 Movable -->
+          <div class="absolute top-2.5 left-2.5 flex items-center bg-black/85 p-0.5 rounded-full border border-white/20 shadow-lg z-10 backdrop-blur-sm">
+            <button id="btn-cam-lock" onclick="setCameraLockMode(true)" class="px-3 py-1 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer bg-[#81b64c] text-[#1c1a17] shadow-sm" title="Lock camera to fixed gameboard view">
+              <span>🔒</span> Lock
+            </button>
+            <button id="btn-cam-movable" onclick="setCameraLockMode(false)" class="px-3 py-1 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer text-zinc-300 hover:text-white" title="Unlock camera to freely orbit, rotate and zoom in/out at pieces">
+              <span>🔓</span> Movable
+            </button>
+          </div>
+
           <!-- Floating Action POV controls in 3D Viewport -->
           <div class="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-10">
             <button id="btn-pov-cam-toggle" onclick="toggleCameraFollow()" class="px-2.5 py-1 rounded-full bg-black/80 hover:bg-black/95 text-[#81b64c] border border-[#81b64c]/40 text-[11px] font-bold shadow-md transition flex items-center gap-1 cursor-pointer" title="Toggle dynamic Action POV camera on moves & attacks">
@@ -561,6 +571,16 @@
             </button>
             <button id="btn-pov-demo-attack" onclick="triggerDemoAttackTransition()" class="px-2.5 py-1 rounded-full bg-[#81b64c] hover:bg-[#8ecb53] text-[#1c1a17] font-extrabold text-[11px] shadow-md transition flex items-center gap-1 cursor-pointer" title="Preview cinematic POV attack animation">
               ⚡ Test POV
+            </button>
+          </div>
+
+          <!-- Floating Zoom Controls for inspecting pieces up close -->
+          <div id="hud-zoom-controls" class="absolute bottom-3 right-3 flex flex-col gap-1 z-10">
+            <button onclick="zoomCameraStep(-1.4)" class="w-8 h-8 rounded-full bg-black/80 hover:bg-black text-white border border-white/20 font-bold text-sm flex items-center justify-center shadow-lg transition active:scale-95 cursor-pointer" title="Zoom In at pieces">
+              +
+            </button>
+            <button onclick="zoomCameraStep(1.4)" class="w-8 h-8 rounded-full bg-black/80 hover:bg-black text-white border border-white/20 font-bold text-sm flex items-center justify-center shadow-lg transition active:scale-95 cursor-pointer" title="Zoom Out">
+              −
             </button>
           </div>
 

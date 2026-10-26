@@ -1196,7 +1196,7 @@
     }
 
     function zoomCameraStep(delta) {
-      camState.desiredRadius = Math.max(5.5, Math.min(20.0, camState.desiredRadius + delta));
+      camState.desiredRadius = Math.max(3.0, Math.min(22.0, camState.desiredRadius + delta));
     }
 
     function orbitCameraStep(deltaTheta) {

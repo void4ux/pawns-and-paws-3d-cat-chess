@@ -377,18 +377,19 @@
     // Default is 'overheadAuto': looks straight down from above (like Reference 1: 1000756616.jpg),
     // and automatically swoops down to low-angle 3D close-up (like Reference 2 & 3: 1000756617/18.jpg) on attacks!
     const camState = {
-      playMode: 'overheadAuto', // 'overheadAuto' | 'diorama3d'
+      playMode: 'diorama3d',
       theta: 0,
-      phi: 0.08,                // Overhead top-down angle by default (Reference 1)
-      radius: 15.2,
-      target: new THREE.Vector3(0, 0.1, 0),
+      phi: 1.04,                // Beautiful 3D perspective showing full cats and diorama
+      radius: 12.8,
+      target: new THREE.Vector3(0, 0.25, 0),
       desiredTheta: 0,
-      desiredPhi: 0.08,
-      desiredRadius: 15.2,
-      desiredTarget: new THREE.Vector3(0, 0.1, 0),
-      lerpSpeed: 0.13,
+      desiredPhi: 1.04,
+      desiredRadius: 12.8,
+      desiredTarget: new THREE.Vector3(0, 0.25, 0),
+      lerpSpeed: 0.14,
       isOrtho: false,
       followMoves: true,
+      cameraLocked: true,
       savedPreCapture: null,
       isDragging: false,
       isPanning: false,
@@ -2931,11 +2932,13 @@
             const capRing = new THREE.Mesh(mGeoCapRing, mMatCap);
             capRing.rotation.x = -Math.PI / 2;
             capRing.position.copy(pos);
+            capRing.userData = { square: mv.to };
             markersGroup3d.add(capRing);
           } else {
             const dot = new THREE.Mesh(mGeoDot, mMatDot);
             dot.rotation.x = -Math.PI / 2;
             dot.position.copy(pos);
+            dot.userData = { square: mv.to };
             markersGroup3d.add(dot);
           }
         });
@@ -2968,8 +2971,7 @@
     // four-legged pounce with paw-print tile decals, then transitions back up!
     // =========================================================================
     function start3DMoveAnimation(moveObj, onComplete) {
-      const style = appState.captureStyle || 'cinematic';
-      if (style === 'reduced' || !piecesGroup3d) {
+      if (!piecesGroup3d) {
         sync3DPiecesWithChessState();
         if (onComplete) onComplete();
         return;
@@ -3012,13 +3014,11 @@
       // Spawn white Paw-Print Decals along the move path (like Reference 3: 1000756618.jpg!)
       spawnPawPrintTrailOnBoard(fromPos, toPos);
 
-      // Every move (normal moves AND captures) uses the 3D POV camera transition when style !== 'minimal'
-      const use3DPovTransition = (style !== 'minimal' && camState.followMoves !== false);
+      // Every move (normal moves AND captures) uses the 3D POV camera transition
+      const use3DPovTransition = (camState.followMoves !== false);
       // Snappy yet cinematic duration so the player sees the cat coil, pounce across tiles, and strike!
-      let baseDuration = isCapture
-        ? (style === 'cinematic' ? 960 : (style === 'quick' ? 700 : 860))
-        : (style === 'cinematic' ? 740 : (style === 'quick' ? 520 : 640));
-      baseDuration = Math.max(260, baseDuration / speedMult);
+      let baseDuration = isCapture ? 1350 : 950;
+      baseDuration = Math.max(480, baseDuration / speedMult);
 
       // AUTOMATIC OVER-THE-SHOULDER 3D ACTION POV ON EVERY MOVE & ATTACK!
       if (use3DPovTransition) {
@@ -3043,17 +3043,17 @@
 
         // Look-at target: focused forward on target square / defending piece
         const lookTarget = new THREE.Vector3(
-          toPos.x * 0.75 + fromPos.x * 0.25,
+          toPos.x * 0.70 + fromPos.x * 0.30,
           isCapture ? 0.45 : 0.35,
-          toPos.z * 0.75 + fromPos.z * 0.25
+          toPos.z * 0.70 + fromPos.z * 0.30
         );
         camState.desiredTarget.copy(lookTarget);
         camState.desiredTheta = povTheta;
         // Low-angle perspective matching the reference screenshot!
-        camState.desiredPhi = isCapture ? 1.30 : 1.26;
+        camState.desiredPhi = isCapture ? 1.30 : 1.25;
         // Dynamic close-in radius framing the cat and target pieces
-        camState.desiredRadius = Math.min(5.6, Math.max(3.2, moveDist * 0.85 + 1.8));
-        camState.lerpSpeed = 0.22; // Snappy, exciting camera swoop
+        camState.desiredRadius = Math.min(5.6, Math.max(3.4, moveDist * 0.85 + 1.8));
+        camState.lerpSpeed = 0.26; // Snappy, exciting camera swoop
 
         const banner = document.getElementById('hud-capture-banner');
         if (banner) {
@@ -3122,15 +3122,15 @@
       const povTheta = (Math.abs(dirX) + Math.abs(dirZ) > 0.05) ? Math.atan2(-dirX, -dirZ) : 0;
 
       const lookTarget = new THREE.Vector3(
-        toPos.x * 0.75 + fromPos.x * 0.25,
+        toPos.x * 0.70 + fromPos.x * 0.30,
         0.45,
-        toPos.z * 0.75 + fromPos.z * 0.25
+        toPos.z * 0.70 + fromPos.z * 0.30
       );
       camState.desiredTarget.copy(lookTarget);
       camState.desiredTheta = povTheta;
       camState.desiredPhi = 1.30;
-      camState.desiredRadius = Math.min(5.4, Math.max(3.2, moveDist * 0.85 + 1.8));
-      camState.lerpSpeed = 0.22;
+      camState.desiredRadius = Math.min(5.6, Math.max(3.4, moveDist * 0.85 + 1.8));
+      camState.lerpSpeed = 0.26;
 
       const banner = document.getElementById('hud-capture-banner');
       if (banner) {
@@ -3149,7 +3149,7 @@
         isCapture: true,
         impactPlayed: false,
         startTime: performance.now(),
-        duration: 1100,
+        duration: 1400,
         onComplete: () => {
           showToast('🎯 Camera smoothly returned to Overview!');
         }
@@ -3645,10 +3645,10 @@
         }
 
         // Return Camera Smoothly to saved overview view at end of move
-        if (rawT >= 0.84 && camState.savedPreCapture) {
-          camState.lerpSpeed = 0.13;
+        if (rawT >= 0.88 && camState.savedPreCapture) {
+          camState.lerpSpeed = 0.12;
           camState.desiredTheta = camState.savedPreCapture.theta;
-          camState.desiredPhi = camState.savedPreCapture.phi;
+          camState.desiredPhi = Math.max(0.98, camState.savedPreCapture.phi);
           camState.desiredRadius = camState.savedPreCapture.radius;
           camState.desiredTarget.copy(camState.savedPreCapture.target);
           camState.savedPreCapture = null;
@@ -3787,8 +3787,7 @@
       activeCamera.lookAt(camState.target);
     }
 
-    // Switch between 'overheadAuto' (Reference 1 overhead view -> swoops to Reference 2/3 on attacks)
-    // and 'diorama3d' (Reference 3 & 4 full 3D Coastal Plaza angle)
+    // Switch between 'overheadAuto' and 'diorama3d'
     function setCameraPlayMode(mode, instant = false) {
       camState.playMode = mode;
       const btnAuto = document.getElementById('btn-cam-mode-auto');
@@ -3798,11 +3797,10 @@
 
       if (mode === 'overheadAuto') {
         camState.desiredTheta = appState.boardFlipped ? Math.PI : 0;
-        camState.desiredPhi = 0.08;   // Directly overhead (Reference 1: 1000756616.jpg)
-        camState.desiredRadius = 15.2;
-        camState.desiredTarget.set(0, 0.1, 0);
+        camState.desiredPhi = 1.04;   // Fixed, crystal-clear 3D gameboard view
+        camState.desiredRadius = 12.8;
+        camState.desiredTarget.set(0, 0.25, 0);
       } else {
-        // Reference 3 & 4 (1000756618.jpg & 1000756619.jpg) 3D Coastal Cat Plaza Diorama Angle!
         camState.desiredTheta = (appState.boardFlipped ? Math.PI : 0) - 0.42;
         camState.desiredPhi = 1.04;
         camState.desiredRadius = 15.4;
@@ -3812,17 +3810,45 @@
       else playSoundEffect('click');
     }
 
+    // Toggle between Fixed Board Lock (🔒) and Free Movable/Zoom Mode (🔓)
+    function setCameraLockMode(isLocked) {
+      camState.cameraLocked = isLocked;
+      const btnLock = document.getElementById('btn-cam-lock');
+      const btnMovable = document.getElementById('btn-cam-movable');
+      if (btnLock && btnMovable) {
+        if (isLocked) {
+          btnLock.className = "px-3 py-1 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer bg-[#81b64c] text-[#1c1a17] shadow-sm";
+          btnMovable.className = "px-3 py-1 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer text-zinc-300 hover:text-white";
+        } else {
+          btnLock.className = "px-3 py-1 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer text-zinc-300 hover:text-white";
+          btnMovable.className = "px-3 py-1 rounded-full text-xs font-bold transition flex items-center gap-1.5 cursor-pointer bg-[#81b64c] text-[#1c1a17] shadow-sm";
+        }
+      }
+      if (isLocked) {
+        // Smoothly return camera to fixed, stable gameboard view
+        camState.desiredPhi = 1.04;
+        camState.desiredTheta = (typeof appState !== 'undefined' && appState.boardFlipped) ? Math.PI : 0;
+        camState.desiredRadius = 12.8;
+        camState.desiredTarget.set(0, 0.25, 0);
+        showToast('🔒 Gameboard View Locked');
+      } else {
+        showToast('🔓 Movable: Drag board to orbit, scroll or pinch to zoom!');
+      }
+      playSoundEffect('click');
+    }
+    window.setCameraLockMode = setCameraLockMode;
+
     function bind3DCanvasEvents(domElem) {
       domElem.addEventListener('contextmenu', (e) => e.preventDefault());
-      camState.cameraLocked = true; // Strictly locked during gameplay so moving pieces is effortless!
+      camState.cameraLocked = true; // Default to locked gameboard view
 
       domElem.addEventListener('pointerdown', (e) => {
         ensureAudioContext();
         camState.dragStartX = e.clientX;
         camState.dragStartY = e.clientY;
         camState.pointerMovedDist = 0;
-        // Never orbit/drag camera on normal board clicks when cameraLocked is true
-        if (!camState.cameraLocked && e.button === 2) {
+        // In Movable mode (!cameraLocked), enable smooth drag orbit on any pointerdown!
+        if (!camState.cameraLocked) {
           camState.isDragging = true;
         } else {
           camState.isDragging = false;
@@ -3837,25 +3863,29 @@
         camState.dragStartY = e.clientY;
         camState.pointerMovedDist += Math.hypot(dx, dy);
         camState.desiredTheta -= dx * 0.0075;
-        camState.desiredPhi = Math.max(0.06, Math.min(1.42, camState.desiredPhi - dy * 0.0065));
+        camState.desiredPhi = Math.max(0.20, Math.min(1.44, camState.desiredPhi - dy * 0.0065));
       });
 
       window.addEventListener('pointerup', (e) => {
-        const dist = Math.hypot(e.clientX - camState.dragStartX, e.clientY - camState.dragStartY);
+        const dist = camState.pointerMovedDist;
         camState.isDragging = false;
-        if (dist < 28 && e.target === domElem) {
+        if (dist < 8 && (e.target === domElem || domElem.contains(e.target))) {
           handle3DCanvasClick(e, domElem);
         }
       });
 
       domElem.addEventListener('wheel', (e) => {
-        if (camState.cameraLocked) return;
         e.preventDefault();
-        zoomCameraStep(e.deltaY > 0 ? 1.0 : -1.0);
+        zoomCameraStep(e.deltaY > 0 ? 0.9 : -0.9);
       }, { passive: false });
 
       domElem.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 2) {
+        if (e.touches.length === 1 && !camState.cameraLocked) {
+          camState.dragStartX = e.touches[0].clientX;
+          camState.dragStartY = e.touches[0].clientY;
+          camState.pointerMovedDist = 0;
+          camState.isDragging = true;
+        } else if (e.touches.length === 2) {
           const dx = e.touches[0].clientX - e.touches[1].clientX;
           const dy = e.touches[0].clientY - e.touches[1].clientY;
           camState.pinchStartDist = Math.hypot(dx, dy);
@@ -3863,7 +3893,15 @@
       }, { passive: true });
 
       domElem.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 2 && camState.pinchStartDist > 10) {
+        if (e.touches.length === 1 && camState.isDragging && !camState.cameraLocked) {
+          const dx = e.touches[0].clientX - camState.dragStartX;
+          const dy = e.touches[0].clientY - camState.dragStartY;
+          camState.dragStartX = e.touches[0].clientX;
+          camState.dragStartY = e.touches[0].clientY;
+          camState.pointerMovedDist += Math.hypot(dx, dy);
+          camState.desiredTheta -= dx * 0.0075;
+          camState.desiredPhi = Math.max(0.20, Math.min(1.44, camState.desiredPhi - dy * 0.0065));
+        } else if (e.touches.length === 2 && camState.pinchStartDist > 10) {
           const dx = e.touches[0].clientX - e.touches[1].clientX;
           const dy = e.touches[0].clientY - e.touches[1].clientY;
           const dist = Math.hypot(dx, dy);
@@ -3896,7 +3934,18 @@
         }
       }
 
-      // 2. Check Click on 3D Cat Pieces
+      // 2. Check Click on Legal Move Markers (dots / capture rings)
+      if (markersGroup3d && markersGroup3d.children.length > 0) {
+        const markerHits = raycaster3d.intersectObjects(markersGroup3d.children, true);
+        for (const hit of markerHits) {
+          if (hit.object.userData?.square) {
+            onBoardSquareInteract(hit.object.userData.square);
+            return;
+          }
+        }
+      }
+
+      // 3. Check Click on 3D Cat Pieces
       const pieceHits = raycaster3d.intersectObjects(piecesGroup3d.children, true);
       if (pieceHits.length > 0) {
         let obj = pieceHits[0].object;
@@ -3909,8 +3958,9 @@
         }
       }
 
-      // 3. Check Click on 64 Stone Plaza Tiles
-      const tileHits = raycaster3d.intersectObjects(boardGroup3d.children, false);
+      // 4. Check Click on 64 Stone Plaza Tiles
+      const tilesList = Object.values(squareMeshesMap);
+      const tileHits = raycaster3d.intersectObjects(tilesList.length > 0 ? tilesList : boardGroup3d.children, false);
       for (const hit of tileHits) {
         if (hit.object.userData?.isSquareTile && hit.object.userData.square) {
           onBoardSquareInteract(hit.object.userData.square);
