@@ -2734,8 +2734,14 @@
       ctx.textBaseline = 'middle';
       ctx.fillStyle = colorHex || '#e6dfd5';
       ctx.fillText(text, 32, 34);
-      const tex = new THREE.CanvasTexture(canvas);
-      const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false });
+      const mat = new THREE.MeshBasicMaterial({
+        map: tex,
+        transparent: true,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        polygonOffsetUnits: -2
+      });
       const geo = new THREE.PlaneGeometry(0.36, 0.36);
       const mesh = new THREE.Mesh(geo, mat);
       mesh.rotation.x = -Math.PI / 2;
@@ -2758,7 +2764,10 @@
           color: 0xffffff,
           transparent: true,
           opacity: 0.85,
-          depthWrite: false
+          depthWrite: false,
+          polygonOffset: true,
+          polygonOffsetFactor: -2,
+          polygonOffsetUnits: -2
         });
       }
       const steps = 4;
@@ -4366,12 +4375,27 @@
       laserDotGroup.visible = false;
       const laserCore = new THREE.Mesh(
         new THREE.CircleGeometry(0.11, 16),
-        new THREE.MeshBasicMaterial({ color: '#ff1e42' })
+        new THREE.MeshBasicMaterial({
+          color: '#ff1e42',
+          depthWrite: false,
+          polygonOffset: true,
+          polygonOffsetFactor: -3,
+          polygonOffsetUnits: -3
+        })
       );
       laserCore.rotation.x = -Math.PI / 2;
+      laserCore.position.y = 0.002;
       const laserHalo = new THREE.Mesh(
         new THREE.CircleGeometry(0.24, 16),
-        new THREE.MeshBasicMaterial({ color: '#ef4444', transparent: true, opacity: 0.45 })
+        new THREE.MeshBasicMaterial({
+          color: '#ef4444',
+          transparent: true,
+          opacity: 0.45,
+          depthWrite: false,
+          polygonOffset: true,
+          polygonOffsetFactor: -2,
+          polygonOffsetUnits: -2
+        })
       );
       laserHalo.rotation.x = -Math.PI / 2;
       laserDotGroup.add(laserHalo, laserCore);
@@ -4527,13 +4551,13 @@
       keyLight3d = new THREE.DirectionalLight(0xffedd5, 1.15);
       keyLight3d.position.set(8.5, 15.0, 9.5);
       keyLight3d.castShadow = true;
-      keyLight3d.shadow.bias = -0.0006;
-      keyLight3d.shadow.normalBias = 0.02;
+      keyLight3d.shadow.bias = 0.00005;
+      keyLight3d.shadow.normalBias = 0.015;
       keyLight3d.shadow.camera.near = 1.0;
       keyLight3d.shadow.camera.far = 35.0;
       keyLight3d.shadow.mapSize.width = 1024;
       keyLight3d.shadow.mapSize.height = 1024;
-      const d = 7.5;
+      const d = 9.0;
       keyLight3d.shadow.camera.left = -d;
       keyLight3d.shadow.camera.right = d;
       keyLight3d.shadow.camera.top = d;
@@ -4629,31 +4653,31 @@
         metalness: theme.metalness
       });
 
-      // Stone Curb Frame around the 8x8 Plaza Grid
+      // Stone Curb Frame around the 8x8 Plaza Grid (top surface at y = -0.01)
       const frameMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(10.3, 0.26, 10.3),
+        new THREE.BoxGeometry(10.3, 0.18, 10.3),
         new THREE.MeshStandardMaterial({ color: theme.frameColor, roughness: 0.65, metalness: 0.1 })
       );
-      frameMesh.position.y = -0.15;
+      frameMesh.position.y = -0.10;
       frameMesh.receiveShadow = true;
       boardGroup3d.add(frameMesh);
 
-      // Dark Mortar Base under the 64 Stone Tiles
+      // Dark Mortar Base recessed cleanly under the 64 Stone Tiles (top surface at y = -0.04, 4cm recess prevents z-fighting)
       const mortarMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(9.32, 0.27, 9.32),
+        new THREE.BoxGeometry(9.26, 0.12, 9.26),
         new THREE.MeshStandardMaterial({ color: '#27272a', roughness: 0.85 })
       );
-      mortarMesh.position.y = -0.145;
+      mortarMesh.position.y = -0.10;
       boardGroup3d.add(mortarMesh);
 
-      // 64 Individual Beveled Stone Tiles
-      const sqGeo = new THREE.BoxGeometry(1.10, 0.14, 1.10);
+      // 64 Individual Beveled Stone Tiles (top surface at y = 0.00)
+      const sqGeo = new THREE.BoxGeometry(1.10, 0.08, 1.10);
       for (let r = 0; r < 8; r++) {
         for (let f = 0; f < 8; f++) {
           const sqName = String.fromCharCode(97 + f) + (r + 1);
           const isLight = (f + r) % 2 === 1;
           const tile = new THREE.Mesh(sqGeo, isLight ? lightMat : darkMat);
-          const pos = squareToWorld(sqName, -0.07);
+          const pos = squareToWorld(sqName, -0.04);
           tile.position.copy(pos);
           tile.receiveShadow = true;
           tile.userData = { square: sqName, isSquareTile: true };
@@ -4662,18 +4686,18 @@
         }
       }
 
-      // Engraved Stone Curb Coordinates (a–h and 1–8)
+      // Engraved Stone Curb Coordinates (a–h and 1–8) on top of Curb Frame
       const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
       for (let i = 0; i < 8; i++) {
         const x = (i - 3.5) * 1.15;
         const lblFront = makeCoordLabelSprite(files[i].toUpperCase(), '#f8fafc');
-        lblFront.position.set(x, -0.01, 4.86);
+        lblFront.position.set(x, -0.008, 4.86);
         boardGroup3d.add(lblFront);
 
         const z = (3.5 - i) * 1.15;
         const rankStr = String(i + 1);
         const lblLeft = makeCoordLabelSprite(rankStr, '#f8fafc');
-        lblLeft.position.set(-4.86, -0.01, z);
+        lblLeft.position.set(-4.86, -0.008, z);
         boardGroup3d.add(lblLeft);
       }
     }
@@ -4957,7 +4981,7 @@
         for (let bi = 0; bi < borderCount; bi++) {
           const side = bi % 4;
           const along = ((Math.floor(bi / 4) / Math.ceil(borderCount / 4)) - 0.5) * 8.4 + (Math.random() - 0.5) * 0.4;
-          const rimOffset = 4.32 + (Math.random() - 0.5) * 0.28;
+          const rimOffset = 4.86 + (Math.random() - 0.5) * 0.20;
           const bx = (side === 0 || side === 1) ? along : (side === 2 ? -rimOffset : rimOffset);
           const bz = (side === 2 || side === 3) ? along : (side === 0 ? -rimOffset : rimOffset);
 
@@ -4976,9 +5000,14 @@
             fallen = createSingle3DFallingBlossom(false, '#fb7185', '#fff1f2');
           }
 
-          fallen.position.set(bx, 0.035, bz);
-          fallen.rotation.x = -Math.PI / 2 + (Math.random() - 0.5) * 0.15;
+          fallen.position.set(bx, 0.002, bz);
+          fallen.rotation.x = -Math.PI / 2;
           fallen.rotation.z = Math.random() * Math.PI * 2;
+          fallen.traverse((c) => {
+            if (c.material) {
+              c.material.depthWrite = false;
+            }
+          });
           fallen.userData = { isStaticBorderPetal: true };
           particlesGroup3d.add(fallen);
         }
@@ -5183,7 +5212,7 @@
       // 2. Last Move Highlight Pads (Lichess Olive-Yellow Tint)
       if (appState.lastMove) {
         [appState.lastMove.from, appState.lastMove.to].forEach((sq) => {
-          if (!sq) return;
+          if (!sq || sq === appState.selectedSquare) return;
           const pos = squareToWorld(sq, 0.01);
           const pad = new THREE.Mesh(mGeoPlane, mMatLast);
           pad.rotation.x = -Math.PI / 2;
@@ -6042,7 +6071,7 @@
       if (container && renderer3d) {
         const cw = container.clientWidth;
         const ch = container.clientHeight;
-        if (cw > 20 && ch > 20 && (Math.abs(cw - lastCanvasW) > 2 || Math.abs(ch - lastCanvasH) > 2)) {
+        if (cw > 20 && ch > 20 && (Math.abs(cw - lastCanvasW) > 12 || Math.abs(ch - lastCanvasH) > 12)) {
           lastCanvasW = cw;
           lastCanvasH = ch;
           onResize3DViewport();
