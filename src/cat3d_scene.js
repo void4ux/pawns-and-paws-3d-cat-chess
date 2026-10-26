@@ -109,7 +109,11 @@
           ctx.strokeStyle = '#4a423d';
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.roundRect(x + 2, y + 2, cw - 4, ch - 4, 5);
+          if (typeof ctx.roundRect === 'function') {
+            ctx.roundRect(x + 2, y + 2, cw - 4, ch - 4, 5);
+          } else {
+            ctx.rect(x + 2, y + 2, cw - 4, ch - 4);
+          }
           ctx.fill();
           ctx.stroke();
         }
@@ -416,29 +420,41 @@
       return { white: '#38bdf8', black: '#f59e0b' };
     }
 
-    function makeCoordLabelSprite(text, colorHex) {
+    function makeCoordLabelSprite(text, colorHex, rotZ = 0) {
       const canvas = document.createElement('canvas');
-      canvas.width = 64;
-      canvas.height = 64;
+      canvas.width = 128;
+      canvas.height = 128;
       const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, 64, 64);
-      ctx.font = 'bold 38px "Inter", sans-serif';
+      ctx.clearRect(0, 0, 128, 128);
+
+      // Contrast disc to ensure coordinates pop against any curb texture (marble, dark stone, lava, etc.)
+      ctx.beginPath();
+      ctx.arc(64, 64, 50, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(18, 19, 23, 0.62)';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+      ctx.stroke();
+
+      ctx.font = 'bold 70px "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = colorHex || '#e6dfd5';
-      ctx.fillText(text, 32, 34);
+      ctx.fillStyle = colorHex || '#ffffff';
+      ctx.fillText(text, 64, 66);
       const tex = new THREE.CanvasTexture(canvas);
       const mat = new THREE.MeshBasicMaterial({
         map: tex,
         transparent: true,
+        depthTest: true,
         depthWrite: false,
         polygonOffset: true,
-        polygonOffsetFactor: -2,
-        polygonOffsetUnits: -2
+        polygonOffsetFactor: -4,
+        polygonOffsetUnits: -4
       });
-      const geo = new THREE.PlaneGeometry(0.36, 0.36);
+      const geo = new THREE.PlaneGeometry(0.50, 0.50);
       const mesh = new THREE.Mesh(geo, mat);
       mesh.rotation.x = -Math.PI / 2;
+      if (rotZ !== 0) mesh.rotation.z = rotZ;
       return mesh;
     }
 
@@ -2304,9 +2320,10 @@
     function onResize3DViewport() {
       const container = document.getElementById('canvas-3d-container');
       if (!container || !renderer3d || !perspCamera || !orthoCamera) return;
-      const w = container.clientWidth || 600;
-      const h = container.clientHeight || 600;
-      if (w < 10 || h < 10) return;
+      const rect = container.getBoundingClientRect();
+      const w = Math.floor(rect.width) || container.clientWidth || 600;
+      const h = Math.floor(rect.height) || container.clientHeight || w;
+      if (w < 20 || h < 20) return;
       if (renderer3d._lastW === w && renderer3d._lastH === h) return;
       renderer3d._lastW = w;
       renderer3d._lastH = h;
@@ -2380,19 +2397,32 @@
         }
       }
 
-      // Engraved Stone Curb Coordinates (a–h and 1–8) on top of Curb Frame
+      // Engraved Stone Curb Coordinates (a–h and 1–8) on all 4 sides of Curb Frame
+      // Visible and upright whether playing as White, Black, or in Spectator mode!
       const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
       for (let i = 0; i < 8; i++) {
         const x = (i - 3.5) * 1.15;
-        const lblFront = makeCoordLabelSprite(files[i].toUpperCase(), '#f8fafc');
-        lblFront.position.set(x, -0.008, 4.86);
+        // Front curb (facing White side)
+        const lblFront = makeCoordLabelSprite(files[i].toUpperCase(), '#f8fafc', 0);
+        lblFront.position.set(x, 0.005, 4.86);
         boardGroup3d.add(lblFront);
+
+        // Back curb (facing Black side, upright for Black perspective)
+        const lblBack = makeCoordLabelSprite(files[i].toUpperCase(), '#f8fafc', Math.PI);
+        lblBack.position.set(x, 0.005, -4.86);
+        boardGroup3d.add(lblBack);
 
         const z = (3.5 - i) * 1.15;
         const rankStr = String(i + 1);
-        const lblLeft = makeCoordLabelSprite(rankStr, '#f8fafc');
-        lblLeft.position.set(-4.86, -0.008, z);
+        // Left curb (facing White side)
+        const lblLeft = makeCoordLabelSprite(rankStr, '#f8fafc', 0);
+        lblLeft.position.set(-4.86, 0.005, z);
         boardGroup3d.add(lblLeft);
+
+        // Right curb (facing Black side, upright for Black perspective)
+        const lblRight = makeCoordLabelSprite(rankStr, '#f8fafc', Math.PI);
+        lblRight.position.set(4.86, 0.005, z);
+        boardGroup3d.add(lblRight);
       }
     }
 

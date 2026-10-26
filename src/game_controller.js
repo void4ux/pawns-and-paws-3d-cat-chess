@@ -43,9 +43,13 @@
         if (lblBtn) lblBtn.textContent = 'Home';
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
-      setTimeout(() => {
-        if (typeof onResize3DViewport === 'function') onResize3DViewport();
-      }, 50);
+      if (typeof onResize3DViewport === 'function') {
+        onResize3DViewport();
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(onResize3DViewport);
+        }
+        setTimeout(onResize3DViewport, 60);
+      }
     }
 
     function openChatModal() {
@@ -551,6 +555,10 @@
         const blob = new Blob([workerCode], { type: 'application/javascript' });
         const worker = new Worker(URL.createObjectURL(blob));
         worker.onmessage = onAIWorkerMessage;
+        worker.onerror = (err) => {
+          console.warn('AI worker encountered error, will use local engine:', err);
+          aiWorker = null;
+        };
         return worker;
       } catch (err) {
         return null;
@@ -595,12 +603,32 @@
 
       const fen = chessEngine.fen();
       if (aiWorker) {
-        aiWorker.postMessage({ fen, difficulty: appState.aiDifficulty, requestType });
+        let responded = false;
+        const safetyTimer = setTimeout(() => {
+          if (!responded) {
+            console.warn('AI worker response timed out, using fallback move...');
+            const res = computeBestMoveFallback(fen, appState.aiDifficulty);
+            onAIWorkerMessage({ data: { ...res, requestType } });
+          }
+        }, 650);
+
+        aiWorker.onmessage = (e) => {
+          responded = true;
+          clearTimeout(safetyTimer);
+          onAIWorkerMessage(e);
+        };
+        try {
+          aiWorker.postMessage({ fen, difficulty: appState.aiDifficulty, requestType });
+        } catch (err) {
+          clearTimeout(safetyTimer);
+          const res = computeBestMoveFallback(fen, appState.aiDifficulty);
+          onAIWorkerMessage({ data: { ...res, requestType } });
+        }
       } else {
         setTimeout(() => {
           const res = computeBestMoveFallback(fen, appState.aiDifficulty);
           onAIWorkerMessage({ data: { ...res, requestType } });
-        }, 200);
+        }, 150);
       }
     }
 
@@ -1101,8 +1129,11 @@
         }
       }
 
-      if (botClockEl) botClockEl.textContent = formatClockMs(appState.clock.wRemainingMs);
-      if (topClockEl) topClockEl.textContent = formatClockMs(appState.clock.bRemainingMs);
+      const isFlipped = appState.boardFlipped;
+      const botTime = isFlipped ? appState.clock.bRemainingMs : appState.clock.wRemainingMs;
+      const topTime = isFlipped ? appState.clock.wRemainingMs : appState.clock.bRemainingMs;
+      if (botClockEl) botClockEl.textContent = formatClockMs(botTime);
+      if (topClockEl) topClockEl.textContent = formatClockMs(topTime);
     }
 
     function handleClockTimeout(expiredColor) {
@@ -2080,14 +2111,25 @@
       const ratingBotEl = document.getElementById('rating-badge-bottom');
 
       if (appState.gameMode === 'ai') {
+        const isBlack = appState.playerSide === 'b';
         if (badge) badge.textContent = `10+0`;
-        document.getElementById('name-player-top').textContent = botNameMap[appState.aiDifficulty] || 'Master_Felix';
-        document.getElementById('tag-player-top').textContent = `(${topElo})`;
-        if (ratingTopEl) ratingTopEl.textContent = topElo;
-        document.getElementById('name-player-bottom').textContent = 'checknimga';
-        document.getElementById('tag-player-bottom').textContent = '(1500)';
-        if (ratingBotEl) ratingBotEl.textContent = '1500';
-        appState.boardFlipped = appState.playerSide === 'b';
+        const botName = botNameMap[appState.aiDifficulty] || 'Master_Felix';
+        if (isBlack) {
+          document.getElementById('name-player-top').textContent = `${botName} (White ⚪)`;
+          document.getElementById('tag-player-top').textContent = `(${topElo})`;
+          if (ratingTopEl) ratingTopEl.textContent = topElo;
+          document.getElementById('name-player-bottom').textContent = 'checknimga (Black ⚫)';
+          document.getElementById('tag-player-bottom').textContent = '(1500)';
+          if (ratingBotEl) ratingBotEl.textContent = '1500';
+        } else {
+          document.getElementById('name-player-top').textContent = `${botName} (Black ⚫)`;
+          document.getElementById('tag-player-top').textContent = `(${topElo})`;
+          if (ratingTopEl) ratingTopEl.textContent = topElo;
+          document.getElementById('name-player-bottom').textContent = 'checknimga (White ⚪)';
+          document.getElementById('tag-player-bottom').textContent = '(1500)';
+          if (ratingBotEl) ratingBotEl.textContent = '1500';
+        }
+        appState.boardFlipped = isBlack;
       } else if (appState.gameMode === 'local') {
         if (badge) badge.textContent = 'Local 2-Player';
         document.getElementById('name-player-top').textContent = 'Master_Felix';
@@ -2117,7 +2159,7 @@
         if (badge) badge.textContent = 'Pawns & Paws';
       }
 
-      setCameraPlayMode(camState.playMode);
+      setCameraPlayMode(camState.playMode, true);
       sync3DPiecesWithChessState(true);
       renderMoveHistoryTable();
       updateCapturedPiecesAndMaterialUI();
