@@ -1278,14 +1278,6 @@
         iris.scale.set(1.0, 1.12, 0.65);
         eyeBallWrap.add(iris);
 
-        // Limbal outer ring shadow inside the eye for striking depth
-        const limbalRing = new THREE.Mesh(
-          new THREE.TorusGeometry(eyeRadius * 0.88, 0.010, 8, 20),
-          new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.35 })
-        );
-        limbalRing.position.z = eyeRadius * 0.40;
-        eyeBallWrap.add(limbalRing);
-
         // Vertical feline slit pupil
         const pupil = new THREE.Mesh(
           new THREE.SphereGeometry(eyeRadius * 0.48, 14, 12),
@@ -2194,7 +2186,7 @@
       scene3d.background = new THREE.Color('#0ea5e9');
       scene3d.fog = new THREE.FogExp2('#bae6fd', 0.016);
 
-      perspCamera = new THREE.PerspectiveCamera(44, w / h, 0.1, 140);
+      perspCamera = new THREE.PerspectiveCamera(44, w / h, 0.4, 85);
       const aspect = w / h;
       const frustum = 6.4;
       orthoCamera = new THREE.OrthographicCamera(
@@ -2202,15 +2194,14 @@
         frustum * aspect,
         frustum,
         -frustum,
-        0.1,
-        140
+        0.4,
+        85
       );
       activeCamera = perspCamera;
 
       renderer3d = new THREE.WebGLRenderer({
         antialias: true,
-        powerPreference: 'high-performance',
-        precision: 'mediump'
+        powerPreference: 'high-performance'
       });
       renderer3d.setSize(w, h);
       renderer3d.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
@@ -2229,6 +2220,10 @@
       keyLight3d = new THREE.DirectionalLight(0xffedd5, 1.15);
       keyLight3d.position.set(8.5, 15.0, 9.5);
       keyLight3d.castShadow = true;
+      keyLight3d.shadow.bias = -0.0006;
+      keyLight3d.shadow.normalBias = 0.02;
+      keyLight3d.shadow.camera.near = 1.0;
+      keyLight3d.shadow.camera.far = 35.0;
       keyLight3d.shadow.mapSize.width = 1024;
       keyLight3d.shadow.mapSize.height = 1024;
       const d = 7.5;
@@ -2287,6 +2282,9 @@
       const w = container.clientWidth || 600;
       const h = container.clientHeight || 600;
       if (w < 10 || h < 10) return;
+      if (renderer3d._lastW === w && renderer3d._lastH === h) return;
+      renderer3d._lastW = w;
+      renderer3d._lastH = h;
 
       perspCamera.aspect = w / h;
       perspCamera.updateProjectionMatrix();
@@ -2859,11 +2857,11 @@
       if (!mGeoCapRing) mGeoCapRing = new THREE.RingGeometry(0.39, 0.51, 20);
       if (!mGeoCheckHalo) mGeoCheckHalo = new THREE.RingGeometry(0.32, 0.54, 24);
 
-      if (!mMatSel) mMatSel = new THREE.MeshBasicMaterial({ color: 0x629924, transparent: true, opacity: 0.48, depthWrite: false });
-      if (!mMatLast) mMatLast = new THREE.MeshBasicMaterial({ color: 0x9bc700, transparent: true, opacity: 0.34, depthWrite: false });
-      if (!mMatDot) mMatDot = new THREE.MeshBasicMaterial({ color: 0x629924, transparent: true, opacity: 0.85 });
-      if (!mMatCap) mMatCap = new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide });
-      if (!mMatCheck) mMatCheck = new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide });
+      if (!mMatSel) mMatSel = new THREE.MeshBasicMaterial({ color: 0x629924, transparent: true, opacity: 0.48, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      if (!mMatLast) mMatLast = new THREE.MeshBasicMaterial({ color: 0x9bc700, transparent: true, opacity: 0.34, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      if (!mMatDot) mMatDot = new THREE.MeshBasicMaterial({ color: 0x629924, transparent: true, opacity: 0.85, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      if (!mMatCap) mMatCap = new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      if (!mMatCheck) mMatCheck = new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
 
       // 1. Selected Square Highlight (Lichess Green/Gold Tint)
       if (appState.selectedSquare) {
@@ -3813,6 +3811,7 @@
 
     function bind3DCanvasEvents(domElem) {
       domElem.addEventListener('contextmenu', (e) => e.preventDefault());
+      domElem.style.touchAction = 'none';
       camState.cameraLocked = true; // Default to locked gameboard view
 
       domElem.addEventListener('pointerdown', (e) => {
@@ -3842,7 +3841,7 @@
       window.addEventListener('pointerup', (e) => {
         const dist = camState.pointerMovedDist;
         camState.isDragging = false;
-        if (dist < 8 && (e.target === domElem || domElem.contains(e.target))) {
+        if (dist < 14 && (e.target === domElem || domElem.contains(e.target))) {
           handle3DCanvasClick(e, domElem);
         }
       });
@@ -3853,12 +3852,7 @@
       }, { passive: false });
 
       domElem.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 1 && !camState.cameraLocked) {
-          camState.dragStartX = e.touches[0].clientX;
-          camState.dragStartY = e.touches[0].clientY;
-          camState.pointerMovedDist = 0;
-          camState.isDragging = true;
-        } else if (e.touches.length === 2) {
+        if (e.touches.length === 2) {
           const dx = e.touches[0].clientX - e.touches[1].clientX;
           const dy = e.touches[0].clientY - e.touches[1].clientY;
           camState.pinchStartDist = Math.hypot(dx, dy);
@@ -3866,22 +3860,15 @@
       }, { passive: true });
 
       domElem.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 1 && camState.isDragging && !camState.cameraLocked) {
-          const dx = e.touches[0].clientX - camState.dragStartX;
-          const dy = e.touches[0].clientY - camState.dragStartY;
-          camState.dragStartX = e.touches[0].clientX;
-          camState.dragStartY = e.touches[0].clientY;
-          camState.pointerMovedDist += Math.hypot(dx, dy);
-          camState.desiredTheta -= dx * 0.0075;
-          camState.desiredPhi = Math.max(0.20, Math.min(1.44, camState.desiredPhi - dy * 0.0065));
-        } else if (e.touches.length === 2 && camState.pinchStartDist > 10) {
+        if (e.touches.length === 2 && camState.pinchStartDist > 10) {
+          if (e.cancelable) e.preventDefault();
           const dx = e.touches[0].clientX - e.touches[1].clientX;
           const dy = e.touches[0].clientY - e.touches[1].clientY;
           const dist = Math.hypot(dx, dy);
           zoomCameraStep((camState.pinchStartDist - dist) * 0.03);
           camState.pinchStartDist = dist;
         }
-      }, { passive: true });
+      }, { passive: false });
     }
 
     function handle3DCanvasClick(e, domElem) {
