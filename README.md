@@ -36,21 +36,22 @@ Play real-time chess with your friends anywhere in the world directly in your br
 </div>
 
 ### How to Play with a Friend:
-1. **Host a Match**:
-   - Open the game and click **Online Multiplayer**.
-   - Click **➕ Create Room** to generate a unique room code (e.g. `PAWS-4821`).
-   - Click **🔗 Copy Link** to copy your direct 1-click invite link:
-     ```
-     https://void4ux.github.io/pawns-and-paws-3d-cat-chess/?room=PAWS-4821
-     ```
-2. **Invite Your Friend**:
-   - Send the link to your friend on Discord, WhatsApp, Telegram, or Twitter/X.
-   - When your friend opens the link, the game **automatically connects them** as Black!
-3. **Live Sync Features**:
-   - **Instant Moves**: Board moves synchronize in milliseconds over WebRTC DataChannels.
-   - **Live Arena Map Voting**: Both players vote on their favorite diorama theme before the match starts.
-   - **In-Game Chat & Reactions**: Send cute cat messages and trigger floating 3D emoji reactions (`😹`, `🐟`, `🧶`, `🐾`, `👑`, `🔥`).
-   - **Pass-and-Play Fallback**: Same-machine multi-tab testing via native `BroadcastChannel`.
+1. **Host a Game (Create Code)**:
+   - On the Home screen, click **👑 Host Game**.
+   - Use the auto-generated punchy code (e.g. `CAT7`, `PURR42`) or type your own custom code.
+   - Click **👑 Host Game with this Code**.
+   - Tap **📋 Copy Code** to share the room code with your friend (or **🔗 Copy Link** for a direct 1-click URL).
+   - You play as **White ⚪** and will move first once your friend joins!
+2. **Join a Game (Enter Code)**:
+   - On the Home screen, click **⚔️ Join Game**.
+   - Enter the host's room code (e.g. `CAT7`).
+   - Click **⚔️ Join Game with Code**.
+   - The board automatically rotates to Black's perspective so you play comfortably from your side as **Black ⚫**!
+3. **Instant Auto-Start & Turn Enforcement**:
+   - The second the friend enters the code, both players are automatically launched into the 3D arena!
+   - Turns are strictly enforced: players can only pick up and move their own pieces on their turn.
+   - Moves synchronize with 3D leap animations, captures, checks, and audio over peer-to-peer WebRTC (with automatic multi-tab BroadcastChannel fallback).
+   - Send in-game feline chat messages and trigger floating 3D emoji reactions (`😹`, `🐟`, `🧶`, `🐾`, `👑`, `🔥`).
 
 ---
 

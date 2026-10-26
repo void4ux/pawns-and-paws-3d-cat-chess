@@ -298,6 +298,13 @@
       spawnFloatingEmojiOnBoard(emoji, false);
       appendMatchChatMessage('You', emoji, 'me');
 
+      if (appState.gameMode === 'online') {
+        const payload = { type: 'reaction', emoji };
+        if (peerConn && peerConn.open) { try { peerConn.send(payload); } catch (e) {} }
+        if (appState.online.channel) { try { appState.online.channel.postMessage(payload); } catch (e) {} }
+        return;
+      }
+
       setTimeout(() => {
         const pool = ['😺', '😼', '👑', '🐾', '🔥', '👏', '🤝'];
         const reply = pool[Math.floor(Math.random() * pool.length)];
@@ -312,15 +319,22 @@
       playSoundEffect('click');
       appendMatchChatMessage('You', msg.trim(), 'me');
 
+      if (appState.gameMode === 'online') {
+        const payload = { type: 'chat', text: msg.trim(), sender: appState.online.isHost ? 'Host' : 'Guest' };
+        if (peerConn && peerConn.open) { try { peerConn.send(payload); } catch (e) {} }
+        if (appState.online.channel) { try { appState.online.channel.postMessage(payload); } catch (e) {} }
+        return;
+      }
+
       setTimeout(() => {
-        const replies = [
+        const pool = [
           'Purr-fectly played! Let us see your next move 🐾',
           'Meow! Keep your eyes on my Knights 😼',
           'Good game! May the sharpest claws win 👑',
           'The Coastal Cat Plaza favors the bold! 🏝️'
         ];
         const oppName = document.getElementById('name-player-top')?.textContent || 'Master_Felix';
-        appendMatchChatMessage(oppName, replies[Math.floor(Math.random() * replies.length)], 'opp');
+        appendMatchChatMessage(oppName, pool[Math.floor(Math.random() * pool.length)], 'opp');
       }, 720);
     }
 
@@ -682,6 +696,13 @@
         showToast("Bot vs Bot Spectator Mode active.");
         return;
       }
+      if (appState.gameMode === 'online') {
+        if (turn !== appState.online.myColor) {
+          showToast("⏳ Waiting for opponent's move!");
+          playSoundEffect('illegal');
+          return;
+        }
+      }
 
       appState.cursorSquare = square;
 
@@ -701,6 +722,11 @@
 
       const pieceOnSq = chessEngine.get(square);
       if (pieceOnSq && pieceOnSq.color === turn) {
+        if (appState.gameMode === 'online' && pieceOnSq.color !== appState.online.myColor) {
+          showToast(`⚠️ You are playing as ${appState.online.myColor === 'w' ? 'White ⚪' : 'Black ⚫'}!`);
+          playSoundEffect('illegal');
+          return;
+        }
         appState.selectedSquare = square;
         appState.legalMovesForSelected = chessEngine.moves({ square, verbose: true });
         playSoundEffect('select');
@@ -1262,6 +1288,11 @@
       document.getElementById('gameover-icon').textContent = '🏳️';
       document.getElementById('gameover-title').textContent = `${winner} Wins by Resignation`;
       document.getElementById('gameover-subtitle').textContent = 'Honorable concession in the Cat Plaza.';
+      if (appState.gameMode === 'online') {
+        const payload = { type: 'resign', color: appState.online.myColor };
+        if (peerConn && peerConn.open) { try { peerConn.send(payload); } catch (e) {} }
+        if (appState.online.channel) { try { appState.online.channel.postMessage(payload); } catch (e) {} }
+      }
       openModal('modal-gameover');
     }
 
@@ -1541,105 +1572,272 @@
       return 'pawscat-' + code.toLowerCase().replace(/[^a-z0-9]/g, '');
     }
 
-    function createOnlineRoom() {
-      const code = 'PAWS-' + Math.floor(1000 + Math.random() * 9000);
-      const inp = document.getElementById('online-room-code-input');
-      if (inp) inp.value = code;
-      connectToOnlineRoom(code, 'w', true);
+    function generateRandomHostCode() {
+      const prefixes = ['CAT', 'PAW', 'MEOW', 'PURR', 'FELIX', 'LUNA', 'LION', 'TIGER', 'CHONK', 'WHISKER'];
+      const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+      const num = Math.floor(10 + Math.random() * 90);
+      const code = `${prefix}${num}`;
+      const input = document.getElementById('online-host-code-input');
+      if (input) input.value = code;
+      const display = document.getElementById('host-active-code-display');
+      if (display) display.textContent = code;
+      return code;
     }
 
-    function joinOnlineRoom() {
-      const inp = document.getElementById('online-room-code-input');
-      const code = (inp?.value || '').trim().toUpperCase();
-      if (!code) {
-        showToast('Enter a valid Room Code');
-        return;
+    function openHostOnlineModal() {
+      if (!document.getElementById('online-host-code-input')?.value) {
+        generateRandomHostCode();
       }
-      connectToOnlineRoom(code, 'b', false);
+      renderMultiplayerVotingGrid();
+      openModal('modal-online');
+      setTimeout(() => {
+        document.getElementById('online-host-code-input')?.focus();
+      }, 100);
     }
 
-    function connectToOnlineRoom(code, roleColor, isHost = false) {
+    function openJoinOnlineModal(presetCode) {
+      renderMultiplayerVotingGrid();
+      openModal('modal-online');
+      const joinInp = document.getElementById('online-join-code-input');
+      if (joinInp) {
+        if (presetCode) joinInp.value = presetCode.trim().toUpperCase();
+        setTimeout(() => {
+          joinInp.focus();
+          joinInp.select();
+        }, 100);
+      }
+    }
+
+    function copyHostRoomCode() {
+      const code = (document.getElementById('online-host-code-input')?.value || appState.online.roomCode || 'CAT7').trim().toUpperCase();
+      copyDirectText(code, `📋 Code "${code}" copied to clipboard! Send to your friend.`);
+    }
+
+    function copyHostInviteLink() {
+      const code = (document.getElementById('online-host-code-input')?.value || appState.online.roomCode || 'CAT7').trim().toUpperCase();
+      const url = `${window.location.origin}${window.location.pathname}?room=${code}`;
+      copyDirectText(url, `🔗 1-Click invite link copied! Send to your friend.`);
+    }
+
+    function copyDirectText(text, successToast) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast(successToast);
+        }).catch(() => fallbackCopyDirect(text));
+      } else {
+        fallbackCopyDirect(text);
+      }
+    }
+
+    function fallbackCopyDirect(text) {
+      const el = document.createElement('textarea');
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      showToast('📋 Copied to clipboard!');
+    }
+
+    function startHostingOnlineGame() {
+      let code = (document.getElementById('online-host-code-input')?.value || '').trim().toUpperCase();
+      if (!code) {
+        code = generateRandomHostCode();
+      }
+      code = code.replace(/[^A-Z0-9]/g, '');
+      if (!code) code = 'CAT7';
+
       appState.online.roomCode = code;
-      appState.online.myColor = roleColor;
-      appState.online.connected = true;
-      appState.online.isHost = isHost;
+      appState.online.isHost = true;
+      appState.online.myColor = 'w';
+      appState.online.connected = false;
       appState.gameMode = 'online';
 
-      const statusDetail = document.getElementById('online-status-detail');
-      const badge = document.getElementById('online-room-badge');
-      if (badge) badge.textContent = `Connecting • ${code}`;
+      document.getElementById('host-action-idle')?.classList.add('hidden');
+      document.getElementById('host-action-active')?.classList.remove('hidden');
+      const display = document.getElementById('host-active-code-display');
+      if (display) display.textContent = code;
 
-      // 1. BroadcastChannel fallback for multi-tab testing
+      const badge = document.getElementById('online-room-badge');
+      const detail = document.getElementById('online-status-detail');
+      if (badge) badge.textContent = `Hosting • ${code}`;
+      if (detail) detail.textContent = `🟢 Waiting for friend to join with code: ${code}`;
+
       if (appState.online.channel) {
         try { appState.online.channel.close(); } catch (e) {}
       }
       if (typeof BroadcastChannel !== 'undefined') {
-        const ch = new BroadcastChannel('pawns_paws_room_' + code);
+        const ch = new BroadcastChannel('pawns_paws_room_' + formatPeerRoomId(code));
         ch.onmessage = (ev) => handleIncomingNetworkMessage(ev.data);
         appState.online.channel = ch;
       }
 
-      // 2. Real-Time Peer-to-Peer WebRTC over PeerJS
       if (typeof Peer !== 'undefined') {
         try {
-          if (peerConn) {
-            try { peerConn.close(); } catch (e) {}
-            peerConn = null;
-          }
-          if (peerInstance) {
-            try { peerInstance.destroy(); } catch (e) {}
-            peerInstance = null;
-          }
+          if (peerConn) { try { peerConn.close(); } catch (e) {} peerConn = null; }
+          if (peerInstance) { try { peerInstance.destroy(); } catch (e) {} peerInstance = null; }
 
           const targetPeerId = formatPeerRoomId(code);
+          peerInstance = new Peer(targetPeerId);
 
-          if (isHost) {
-            peerInstance = new Peer(targetPeerId);
-            peerInstance.on('open', () => {
-              if (statusDetail) statusDetail.textContent = '🟢 Host ready! Share invite link with friend.';
-              if (badge) badge.textContent = `Host Ready • ${code}`;
-              showToast(`🌐 Room ${code} created! Send link to friend.`);
-            });
-            peerInstance.on('connection', (conn) => {
-              peerConn = conn;
-              setupPeerConnectionListeners(conn, 'Host', code);
-              setTimeout(() => {
-                if (conn && conn.open) {
-                  conn.send({
-                    type: 'room_welcome',
-                    themeId: appState.themeId,
-                    fen: chessEngine ? chessEngine.fen() : 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
-                  });
-                }
-              }, 400);
-              showToast('🐱 Friend joined your room! Match starting.');
-            });
-            peerInstance.on('error', (err) => {
-              console.warn('PeerJS Host warning:', err);
-              if (err.type === 'unavailable-id') {
-                showToast('Room code in use, creating fresh room...');
-                createOnlineRoom();
-              }
-            });
-          } else {
-            peerInstance = new Peer();
-            peerInstance.on('open', () => {
-              if (statusDetail) statusDetail.textContent = 'Connecting to host...';
-              peerConn = peerInstance.connect(targetPeerId, { reliable: true });
-              setupPeerConnectionListeners(peerConn, 'Guest', code);
-            });
-            peerInstance.on('error', (err) => {
-              console.warn('PeerJS Guest warning:', err);
-              showToast('⚠️ Could not connect to host. Make sure host created room first!');
-            });
-          }
+          peerInstance.on('open', () => {
+            showToast(`👑 Room ${code} is live! Waiting for friend.`);
+          });
+
+          peerInstance.on('connection', (conn) => {
+            peerConn = conn;
+            setupPeerConnectionListeners(conn, 'Host', code);
+            launchOnlineMatchAsHost(code);
+          });
+
+          peerInstance.on('error', (err) => {
+            console.warn('PeerJS Host warning:', err);
+            if (err.type === 'unavailable-id') {
+              showToast(`Code ${code} is already in use. Generated a fresh code!`);
+              generateRandomHostCode();
+              startHostingOnlineGame();
+            }
+          });
         } catch (err) {
-          console.warn('PeerJS init failed, relying on local channel:', err);
+          console.warn('PeerJS initialization error:', err);
         }
       }
+    }
 
-      const activeBadge = document.getElementById('badge-active-mode');
-      if (activeBadge) activeBadge.textContent = `Online • ${code}`;
+    function cancelHostingOnlineGame() {
+      if (peerConn) { try { peerConn.close(); } catch (e) {} peerConn = null; }
+      if (peerInstance) { try { peerInstance.destroy(); } catch (e) {} peerInstance = null; }
+      if (appState.online.channel) { try { appState.online.channel.close(); } catch (e) {} appState.online.channel = null; }
+      appState.online.connected = false;
+      appState.online.isHost = false;
+      document.getElementById('host-action-idle')?.classList.remove('hidden');
+      document.getElementById('host-action-active')?.classList.add('hidden');
+      const badge = document.getElementById('online-room-badge');
+      const detail = document.getElementById('online-status-detail');
+      if (badge) badge.textContent = 'WebRTC P2P Ready';
+      if (detail) detail.textContent = '• Real-time multiplayer across different devices';
+      showToast('Hosting cancelled.');
+    }
+
+    function joinOnlineGameWithCode() {
+      const input = document.getElementById('online-join-code-input');
+      let code = (input?.value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (!code) {
+        showToast('⚠️ Please enter the host\'s room code first!');
+        if (input) input.focus();
+        return;
+      }
+
+      appState.online.roomCode = code;
+      appState.online.isHost = false;
+      appState.online.myColor = 'b';
+      appState.online.connected = false;
+      appState.gameMode = 'online';
+
+      const badge = document.getElementById('online-room-badge');
+      const detail = document.getElementById('online-status-detail');
+      const hint = document.getElementById('join-status-hint');
+      if (badge) badge.textContent = `Joining • ${code}`;
+      if (detail) detail.textContent = `Connecting to host ${code}...`;
+      if (hint) hint.innerHTML = `<span class="animate-pulse text-amber-300">⏳ Connecting to host room <strong>${code}</strong>...</span>`;
+
+      if (appState.online.channel) {
+        try { appState.online.channel.close(); } catch (e) {}
+      }
+      if (typeof BroadcastChannel !== 'undefined') {
+        const ch = new BroadcastChannel('pawns_paws_room_' + formatPeerRoomId(code));
+        ch.onmessage = (ev) => handleIncomingNetworkMessage(ev.data);
+        appState.online.channel = ch;
+        ch.postMessage({ type: 'guest_join_intent', code });
+      }
+
+      if (typeof Peer !== 'undefined') {
+        try {
+          if (peerConn) { try { peerConn.close(); } catch (e) {} peerConn = null; }
+          if (peerInstance) { try { peerInstance.destroy(); } catch (e) {} peerInstance = null; }
+
+          peerInstance = new Peer();
+          const targetId = formatPeerRoomId(code);
+
+          peerInstance.on('open', () => {
+            peerConn = peerInstance.connect(targetId, { reliable: true });
+            setupPeerConnectionListeners(peerConn, 'Guest', code);
+          });
+
+          peerInstance.on('error', (err) => {
+            console.warn('PeerJS Guest error:', err);
+            if (hint) hint.innerHTML = `<span class="text-rose-400">⚠️ Could not reach host for "${code}". Check code or ensure host is waiting!</span>`;
+            showToast(`⚠️ Could not reach host for code "${code}".`);
+          });
+        } catch (err) {
+          console.warn('PeerJS join error:', err);
+        }
+      }
+    }
+
+    function launchOnlineMatchAsHost(code) {
+      appState.gameMode = 'online';
+      appState.online.roomCode = code;
+      appState.online.myColor = 'w';
+      appState.online.isHost = true;
+      appState.online.connected = true;
+      appState.boardFlipped = false;
+
+      const res = resolveWinningVotedMap();
+      applyThemeById(res.winnerId);
+
+      closeModal('modal-online');
+      switchScreenView('match');
+      startConfiguredNewGame();
+
+      const startPayload = {
+        type: 'match_start',
+        code: code,
+        themeId: res.winnerId,
+        fen: chessEngine.fen(),
+        hostColor: 'w',
+        guestColor: 'b'
+      };
+
+      setTimeout(() => {
+        if (peerConn && peerConn.open) {
+          try { peerConn.send(startPayload); } catch (e) {}
+        }
+        if (appState.online.channel) {
+          try { appState.online.channel.postMessage(startPayload); } catch (e) {}
+        }
+      }, 250);
+
+      showToast(`🎉 Friend joined room ${code}! You are White ⚪ — make your first move!`);
+      playSoundEffect('gameStart');
+      appendMatchChatMessage('Arena', `Multiplayer match started! Room: ${code}. Host (White ⚪) vs Guest (Black ⚫).`, 'system');
+    }
+
+    function launchOnlineMatchAsGuest(data) {
+      appState.gameMode = 'online';
+      appState.online.roomCode = data.code || appState.online.roomCode;
+      appState.online.myColor = 'b';
+      appState.online.isHost = false;
+      appState.online.connected = true;
+      appState.boardFlipped = true;
+
+      if (data.themeId) applyThemeById(data.themeId);
+
+      closeModal('modal-online');
+      switchScreenView('match');
+      startConfiguredNewGame();
+
+      if (data.fen && chessEngine) {
+        chessEngine.load(data.fen);
+        sync3DPiecesWithChessState(true);
+        renderMoveHistoryTable();
+        updateGameStatusBanner();
+      }
+      setCameraPlayMode(camState.playMode);
+
+      showToast(`🎉 Connected to Host on room ${data.code || appState.online.roomCode}! You are Black ⚫. White moves first.`);
+      playSoundEffect('gameStart');
+      appendMatchChatMessage('Arena', `Connected to room ${data.code}! You are Black ⚫. White moves first.`, 'system');
     }
 
     function setupPeerConnectionListeners(conn, roleName, code) {
@@ -1657,7 +1855,7 @@
       });
 
       conn.on('close', () => {
-        showToast('⚠️ Friend disconnected from room.');
+        showToast('⚠️ Opponent disconnected from room.');
         const badge = document.getElementById('online-room-badge');
         if (badge) badge.textContent = `Disconnected • ${code}`;
       });
@@ -1665,9 +1863,15 @@
 
     function handleIncomingNetworkMessage(data) {
       if (!data) return;
-      if (data.type === 'move' && data.moveSpec) {
+      if (data.type === 'match_start') {
+        launchOnlineMatchAsGuest(data);
+      } else if (data.type === 'guest_join_intent') {
+        if (appState.online.isHost && appState.online.roomCode === data.code) {
+          launchOnlineMatchAsHost(data.code);
+        }
+      } else if (data.type === 'move' && data.moveSpec) {
         executeValidatedMove(data.moveSpec, false, true);
-        showToast('🐾 Opponent made a move!');
+        showToast('🐾 Opponent made a move! Your turn.');
       } else if (data.type === 'vote' && data.mapId) {
         mpVotingState.opponentVotedMap = data.mapId;
         renderMultiplayerVotingGrid();
@@ -1676,15 +1880,14 @@
         appendMatchChatMessage(data.sender || 'Opponent', data.text, 'opp');
       } else if (data.type === 'reaction' && data.emoji) {
         spawnFloatingEmojiOnBoard(data.emoji, true);
-      } else if (data.type === 'room_welcome') {
-        if (data.themeId) applyThemeById(data.themeId);
-        if (data.fen && chessEngine) {
-          chessEngine.load(data.fen);
-          sync3DPiecesWithChessState(true);
-          renderMoveHistoryTable();
-          updateGameStatusBanner();
-        }
-        showToast('🎮 Synced with host room!');
+      } else if (data.type === 'resign') {
+        showToast('🏳️ Opponent resigned! You win!');
+        const winnerName = appState.online.myColor === 'w' ? 'White ⚪ (You)' : 'Black ⚫ (You)';
+        document.getElementById('gameover-icon').textContent = '🏆';
+        document.getElementById('gameover-title').textContent = `${winnerName} Wins!`;
+        document.getElementById('gameover-subtitle').textContent = 'Opponent conceded the match.';
+        openModal('modal-gameover');
+        playSoundEffect('victory');
       }
     }
 
@@ -1698,33 +1901,19 @@
     }
 
     function copyOnlineRoomCode() {
-      copyTextField('online-room-code-input', 'Room Code copied!');
+      copyHostRoomCode();
     }
 
     function copyOnlineRoomInviteLink() {
-      const code = (document.getElementById('online-room-code-input')?.value || '').trim().toUpperCase();
-      if (!code) {
-        showToast('Create a room code first!');
-        return;
-      }
-      const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${code}`;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(inviteUrl).then(() => {
-          showToast('🔗 Invite Link copied! Send to your friend.');
-        }).catch(() => fallbackCopyDirect(inviteUrl));
-      } else {
-        fallbackCopyDirect(inviteUrl);
-      }
+      copyHostInviteLink();
     }
 
-    function fallbackCopyDirect(text) {
-      const el = document.createElement('textarea');
-      el.value = text;
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand('copy');
-      document.body.removeChild(el);
-      showToast('🔗 Invite Link copied!');
+    function createOnlineRoom() {
+      startHostingOnlineGame();
+    }
+
+    function joinOnlineRoom() {
+      joinOnlineGameWithCode();
     }
 
     function checkUrlForRoomInvite() {
@@ -1732,14 +1921,14 @@
         const params = new URLSearchParams(window.location.search);
         const room = params.get('room');
         if (room) {
-          const cleanCode = room.trim().toUpperCase();
-          const inp = document.getElementById('online-room-code-input');
-          if (inp) inp.value = cleanCode;
+          const cleanCode = room.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+          const joinInp = document.getElementById('online-join-code-input');
+          if (joinInp) joinInp.value = cleanCode;
           showToast(`🎮 Room invite detected: ${cleanCode}`);
-          openMultiplayerMapVotingModal();
+          openJoinOnlineModal(cleanCode);
           setTimeout(() => {
-            connectToOnlineRoom(cleanCode, 'b', false);
-          }, 600);
+            joinOnlineGameWithCode();
+          }, 700);
         }
       } catch (e) {}
     }
@@ -1897,8 +2086,20 @@
         if (badge) badge.textContent = 'Spectator Match';
         document.getElementById('name-player-top').textContent = 'Master_Felix';
         document.getElementById('name-player-bottom').textContent = 'Emperor_Maine';
+      } else if (appState.gameMode === 'online') {
+        const isWhite = appState.online.myColor === 'w';
+        const myTag = appState.online.isHost ? 'Host' : 'Guest';
+        const oppTag = appState.online.isHost ? 'Guest' : 'Host';
+        if (badge) badge.textContent = `Online • ${appState.online.roomCode || 'Match'}`;
+        document.getElementById('name-player-top').textContent = `Opponent (${isWhite ? 'Black ⚫' : 'White ⚪'})`;
+        document.getElementById('tag-player-top').textContent = `(${oppTag})`;
+        if (ratingTopEl) ratingTopEl.textContent = '1500';
+        document.getElementById('name-player-bottom').textContent = `You (${isWhite ? 'White ⚪' : 'Black ⚫'})`;
+        document.getElementById('tag-player-bottom').textContent = `(${myTag})`;
+        if (ratingBotEl) ratingBotEl.textContent = '1500';
+        appState.boardFlipped = !isWhite;
       } else {
-        if (badge) badge.textContent = 'Online Match';
+        if (badge) badge.textContent = 'Pawns & Paws';
       }
 
       setCameraPlayMode(camState.playMode);
@@ -2087,6 +2288,3 @@
       requestAnimationFrame(animateThreeLoop);
       checkUrlForRoomInvite();
     });
-  </script>
-</body>
-</html>

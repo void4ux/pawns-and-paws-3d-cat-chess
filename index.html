@@ -433,13 +433,28 @@
           <span class="text-xs bg-black/25 px-2 py-0.5 rounded font-mono-code">Maps &amp; Bots</span>
         </button>
 
-        <button onclick="openMultiplayerMapVotingModal()" class="cc-btn w-full p-3 text-left flex items-center justify-between hover:border-[#81b64c]/50">
-          <div class="flex items-center gap-3">
-            <span class="w-9 h-9 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-base">🌐</span>
-            <span class="text-xs sm:text-sm font-extrabold text-white">Online Multiplayer</span>
-          </div>
-          <span class="text-xs text-[#81b64c] font-bold">Lobby →</span>
-        </button>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btn-home-host-online" onclick="openHostOnlineModal()" class="cc-btn p-3 text-left flex flex-col justify-between gap-1.5 border-emerald-500/30 hover:border-emerald-500/70 bg-gradient-to-b from-[#18201a] to-[#141519] transition-all">
+            <div class="flex items-center justify-between w-full">
+              <span class="text-base">👑</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-[#81b64c] font-bold font-mono-code">White ⚪</span>
+            </div>
+            <div>
+              <div class="text-xs font-extrabold text-white leading-tight">Host Game</div>
+              <div class="text-[10px] text-zinc-400">Create Room Code</div>
+            </div>
+          </button>
+          <button id="btn-home-join-online" onclick="openJoinOnlineModal()" class="cc-btn p-3 text-left flex flex-col justify-between gap-1.5 border-amber-500/30 hover:border-amber-500/70 bg-gradient-to-b from-[#221c16] to-[#141519] transition-all">
+            <div class="flex items-center justify-between w-full">
+              <span class="text-base">⚔️</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold font-mono-code">Black ⚫</span>
+            </div>
+            <div>
+              <div class="text-xs font-extrabold text-white leading-tight">Join Game</div>
+              <div class="text-[10px] text-zinc-400">Enter Host's Code</div>
+            </div>
+          </button>
+        </div>
 
         <button onclick="openPreGameSetup('local')" class="cc-btn w-full p-3 text-left flex items-center justify-between">
           <div class="flex items-center gap-3">
@@ -956,64 +971,131 @@
     </div>
   </div>
 
-  <!-- MODAL 2: MULTIPLAYER LOBBY & MAP VOTING SYSTEM -->
+  <!-- MODAL 2: MULTIPLAYER LOBBY (HOST CODE & JOIN CODE) -->
   <div id="modal-online" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden flex items-center justify-center p-3 overflow-y-auto">
-    <div class="cc-card max-w-3xl w-full p-5 space-y-4 my-auto">
+    <div class="cc-card max-w-3xl w-full p-5 space-y-4 my-auto border border-emerald-500/20 shadow-2xl">
       <div class="flex items-center justify-between border-b border-white/10 pb-3">
-        <div>
-          <h3 class="text-base font-extrabold text-white">Multiplayer Lobby &amp; Live Map Voting</h3>
-          <p class="text-xs text-zinc-400">
-            <strong>Voting Rule:</strong> Highest vote wins. If both players vote for different maps (1–1 tie), the <strong>first player to tap</strong> wins the map selection.
-          </p>
+        <div class="flex items-center gap-3">
+          <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 flex items-center justify-center text-xl">🌐</span>
+          <div>
+            <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+              Online Multiplayer Cat Chess
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-[#81b64c] font-mono-code font-bold border border-emerald-500/30">P2P WebRTC</span>
+            </h3>
+            <p class="text-xs text-zinc-400">
+              Host creates a code to start a game • Friend uses that code to join instantly
+            </p>
+          </div>
         </div>
-        <button id="btn-close-online" onclick="closeModal('modal-online')" class="cc-btn px-3 py-1 text-xs font-bold">✕ Close</button>
+        <button id="btn-close-online" onclick="closeModal('modal-online')" class="cc-btn px-3 py-1 text-xs font-bold hover:bg-red-500/20 hover:text-red-300">✕ Close</button>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 cc-subpanel p-3 items-center">
-        <div class="sm:col-span-4">
-          <label for="online-player-name" class="text-[10px] text-zinc-400 block">Your Handle</label>
-          <input id="online-player-name" type="text" value="Whisker_GM" class="w-full bg-[#121316] text-xs px-2.5 py-1.5 rounded border border-white/10 text-white" />
-        </div>
-        <div class="sm:col-span-5 flex items-end gap-1.5">
-          <div class="flex-1">
-            <label for="online-room-code-input" class="text-[10px] text-zinc-400 block">Room Code</label>
-            <input id="online-room-code-input" type="text" value="PAWS-4821" class="w-full bg-[#121316] font-mono-code text-xs px-2.5 py-1.5 rounded border border-white/10 uppercase text-[#81b64c] font-bold" />
+      <!-- DUAL CARD CONTAINER: 1. HOST GAME | 2. JOIN GAME -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <!-- CARD 1: HOST A GAME -->
+        <div class="cc-subpanel p-4 rounded-xl border border-emerald-500/25 flex flex-col justify-between space-y-3 relative overflow-hidden bg-gradient-to-b from-[#19221b] to-[#121614]">
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <span>👑</span> 1. Host Game (Create Code)
+              </span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">Plays White ⚪</span>
+            </div>
+            <p class="text-[11px] text-zinc-400">
+              Create a custom code or generate a random one. Your friend will use this code to join your room.
+            </p>
+
+            <div class="pt-1">
+              <label for="online-host-code-input" class="text-[10px] text-zinc-400 font-semibold block mb-1">Room Code to Host</label>
+              <div class="flex gap-2">
+                <input id="online-host-code-input" type="text" value="CAT7" maxlength="12" class="w-full bg-[#0d120f] font-mono-code text-sm px-3 py-2 rounded-lg border border-white/15 uppercase text-[#81b64c] font-extrabold tracking-wider focus:border-emerald-500 focus:outline-none" placeholder="e.g. CAT7" />
+                <button type="button" onclick="generateRandomHostCode()" class="cc-btn px-2.5 py-2 text-xs font-bold whitespace-nowrap" title="Generate New Random Code">🎲 Random</button>
+              </div>
+            </div>
           </div>
-          <button id="btn-online-create" onclick="createOnlineRoom()" class="cc-btn px-2.5 py-1.5 text-xs font-bold text-white bg-[#2e313a]">➕ Create Room</button>
-          <button id="btn-online-join" onclick="joinOnlineRoom()" class="cc-btn px-2.5 py-1.5 text-xs text-[#81b64c] font-bold">Join Room</button>
-          <button id="btn-online-copy" onclick="copyOnlineRoomInviteLink()" class="cc-btn px-2.5 py-1.5 text-xs text-amber-300 font-semibold" title="Copy 1-Click Invite Link for Friend">🔗 Copy Link</button>
+
+          <!-- Initial Host Action Button -->
+          <div id="host-action-idle" class="space-y-2 pt-2">
+            <button id="btn-host-create-room" onclick="startHostingOnlineGame()" class="cc-play-btn w-full py-2.5 text-xs sm:text-sm font-bold flex items-center justify-center gap-2">
+              <span>👑</span> Host Game with this Code
+            </button>
+          </div>
+
+          <!-- Active Waiting State (shown once hosting) -->
+          <div id="host-action-active" class="hidden space-y-3 pt-2 border-t border-white/10">
+            <div class="p-3 rounded-lg bg-emerald-950/50 border border-emerald-500/40 text-center space-y-2">
+              <div class="flex items-center justify-center gap-2">
+                <span class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
+                <span class="text-xs font-bold text-emerald-300">Room Active • Waiting for Friend</span>
+              </div>
+              <div class="text-[10px] text-zinc-400">Give your friend this room code:</div>
+              <div id="host-active-code-display" class="font-mono-code text-2xl font-black text-white tracking-widest py-1 bg-black/50 rounded border border-white/15 shadow-inner">CAT7</div>
+              
+              <div class="flex gap-2 justify-center pt-1">
+                <button type="button" onclick="copyHostRoomCode()" class="cc-btn px-3 py-1.5 text-xs text-white font-bold flex items-center gap-1.5 bg-[#252830] hover:bg-[#323640]">
+                  <span>📋</span> Copy Code
+                </button>
+                <button type="button" onclick="copyHostInviteLink()" class="cc-btn px-3 py-1.5 text-xs text-amber-300 font-bold flex items-center gap-1.5 bg-[#252830] hover:bg-[#323640]">
+                  <span>🔗</span> Copy Link
+                </button>
+              </div>
+            </div>
+            <button type="button" onclick="cancelHostingOnlineGame()" class="cc-btn w-full py-1.5 text-xs text-zinc-400 hover:text-white">✕ Cancel Hosting</button>
+          </div>
         </div>
-        <div class="sm:col-span-3 text-right">
-          <div id="online-room-badge" class="font-mono-code text-xs text-[#81b64c] font-bold">WebRTC P2P Ready</div>
-          <input id="online-ws-url" type="hidden" value="" />
-          <div id="online-status-detail" class="text-[10px] text-zinc-400">P2P Online Across Devices</div>
+
+        <!-- CARD 2: JOIN A GAME -->
+        <div class="cc-subpanel p-4 rounded-xl border border-amber-500/25 flex flex-col justify-between space-y-3 bg-gradient-to-b from-[#241d15] to-[#15120f]">
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <span>⚔️</span> 2. Join Game (Use Code)
+              </span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">Plays Black ⚫</span>
+            </div>
+            <p class="text-[11px] text-zinc-400">
+              Got a room code from the host? Enter it below to join their lobby and start the match!
+            </p>
+
+            <div class="pt-1">
+              <label for="online-join-code-input" class="text-[10px] text-zinc-400 font-semibold block mb-1">Enter Host's Room Code</label>
+              <input id="online-join-code-input" type="text" class="w-full bg-[#120f0c] font-mono-code text-sm px-3 py-2 rounded-lg border border-white/15 uppercase text-amber-300 font-extrabold tracking-wider focus:border-amber-500 focus:outline-none" placeholder="e.g. CAT7" />
+            </div>
+
+            <div id="join-status-hint" class="text-[11px] text-zinc-400 flex items-center gap-1.5 pt-1">
+              <span>💡</span> Tip: Ask the host for their code (e.g. CAT7) and tap Join Game.
+            </div>
+          </div>
+
+          <div class="space-y-2 pt-2">
+            <button id="btn-join-match" onclick="joinOnlineGameWithCode()" class="cc-play-btn w-full py-2.5 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 !bg-gradient-to-r !from-amber-600 !to-yellow-600 hover:!from-amber-500 hover:!to-yellow-500 shadow-lg">
+              <span>⚔️</span> Join Game with Code
+            </button>
+          </div>
         </div>
+
       </div>
 
-      <div>
-        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-          <span class="text-xs font-extrabold uppercase tracking-wider text-white">Tap a Map to Cast Your Vote:</span>
-          <div class="flex items-center gap-1.5">
-            <button onclick="simulateOpponentMapVote(false)" class="cc-btn px-2.5 py-1 text-[11px]">⚡ Sim Opponent Vote (2nd Tap)</button>
-            <button onclick="simulateOpponentMapVote(true)" class="cc-btn px-2.5 py-1 text-[11px]">⚡ Sim Opponent Taps First</button>
-            <button onclick="resetMultiplayerVotes()" class="cc-btn px-2 py-1 text-[11px]">↺ Reset Votes</button>
-          </div>
+      <!-- MAP SELECTION (CHOSEN BY HOST / PLAYERS) -->
+      <div class="pt-2 border-t border-white/10">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-extrabold uppercase tracking-wider text-white">Arena Map Theme:</span>
+          <span id="mp-vote-winner-headline" class="text-xs font-bold text-[#81b64c]">Coastal Cat Plaza</span>
         </div>
         <div id="mp-map-voting-grid" class="grid grid-cols-2 sm:grid-cols-5 gap-2"></div>
       </div>
 
-      <div id="online-connection-box" class="cc-subpanel p-3.5 flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-[#81b64c]">
-        <div>
-          <div id="mp-vote-winner-headline" class="text-xs sm:text-sm font-extrabold text-white">
-            Winning Map: Coastal Cat Plaza
-          </div>
-          <div id="mp-vote-winner-subline" class="text-[11px] text-zinc-400">
-            Tap any map card above. First tap breaks any 1–1 tie automatically!
-          </div>
+      <!-- STATUS BAR FOOTER -->
+      <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-400 pt-2 border-t border-white/10">
+        <div class="flex items-center gap-2">
+          <span id="online-room-badge" class="font-mono-code text-xs text-[#81b64c] font-bold">WebRTC P2P Ready</span>
+          <span id="online-status-detail" class="text-[10px] text-zinc-400">• Real-time multiplayer across different devices</span>
         </div>
-        <button onclick="launchMultiplayerVotedMatch()" class="cc-play-btn px-5 py-2.5 text-xs">
-          🚀 Start Multiplayer Match on Winning Map
-        </button>
+        <div class="text-[10px] text-zinc-500">Pawns &amp; Paws Peer Mesh</div>
       </div>
     </div>
   </div>
@@ -6267,6 +6349,13 @@
       spawnFloatingEmojiOnBoard(emoji, false);
       appendMatchChatMessage('You', emoji, 'me');
 
+      if (appState.gameMode === 'online') {
+        const payload = { type: 'reaction', emoji };
+        if (peerConn && peerConn.open) { try { peerConn.send(payload); } catch (e) {} }
+        if (appState.online.channel) { try { appState.online.channel.postMessage(payload); } catch (e) {} }
+        return;
+      }
+
       setTimeout(() => {
         const pool = ['😺', '😼', '👑', '🐾', '🔥', '👏', '🤝'];
         const reply = pool[Math.floor(Math.random() * pool.length)];
@@ -6281,15 +6370,22 @@
       playSoundEffect('click');
       appendMatchChatMessage('You', msg.trim(), 'me');
 
+      if (appState.gameMode === 'online') {
+        const payload = { type: 'chat', text: msg.trim(), sender: appState.online.isHost ? 'Host' : 'Guest' };
+        if (peerConn && peerConn.open) { try { peerConn.send(payload); } catch (e) {} }
+        if (appState.online.channel) { try { appState.online.channel.postMessage(payload); } catch (e) {} }
+        return;
+      }
+
       setTimeout(() => {
-        const replies = [
+        const pool = [
           'Purr-fectly played! Let us see your next move 🐾',
           'Meow! Keep your eyes on my Knights 😼',
           'Good game! May the sharpest claws win 👑',
           'The Coastal Cat Plaza favors the bold! 🏝️'
         ];
         const oppName = document.getElementById('name-player-top')?.textContent || 'Master_Felix';
-        appendMatchChatMessage(oppName, replies[Math.floor(Math.random() * replies.length)], 'opp');
+        appendMatchChatMessage(oppName, pool[Math.floor(Math.random() * pool.length)], 'opp');
       }, 720);
     }
 
@@ -6651,6 +6747,13 @@
         showToast("Bot vs Bot Spectator Mode active.");
         return;
       }
+      if (appState.gameMode === 'online') {
+        if (turn !== appState.online.myColor) {
+          showToast("⏳ Waiting for opponent's move!");
+          playSoundEffect('illegal');
+          return;
+        }
+      }
 
       appState.cursorSquare = square;
 
@@ -6670,6 +6773,11 @@
 
       const pieceOnSq = chessEngine.get(square);
       if (pieceOnSq && pieceOnSq.color === turn) {
+        if (appState.gameMode === 'online' && pieceOnSq.color !== appState.online.myColor) {
+          showToast(`⚠️ You are playing as ${appState.online.myColor === 'w' ? 'White ⚪' : 'Black ⚫'}!`);
+          playSoundEffect('illegal');
+          return;
+        }
         appState.selectedSquare = square;
         appState.legalMovesForSelected = chessEngine.moves({ square, verbose: true });
         playSoundEffect('select');
@@ -7231,6 +7339,11 @@
       document.getElementById('gameover-icon').textContent = '🏳️';
       document.getElementById('gameover-title').textContent = `${winner} Wins by Resignation`;
       document.getElementById('gameover-subtitle').textContent = 'Honorable concession in the Cat Plaza.';
+      if (appState.gameMode === 'online') {
+        const payload = { type: 'resign', color: appState.online.myColor };
+        if (peerConn && peerConn.open) { try { peerConn.send(payload); } catch (e) {} }
+        if (appState.online.channel) { try { appState.online.channel.postMessage(payload); } catch (e) {} }
+      }
       openModal('modal-gameover');
     }
 
@@ -7510,105 +7623,272 @@
       return 'pawscat-' + code.toLowerCase().replace(/[^a-z0-9]/g, '');
     }
 
-    function createOnlineRoom() {
-      const code = 'PAWS-' + Math.floor(1000 + Math.random() * 9000);
-      const inp = document.getElementById('online-room-code-input');
-      if (inp) inp.value = code;
-      connectToOnlineRoom(code, 'w', true);
+    function generateRandomHostCode() {
+      const prefixes = ['CAT', 'PAW', 'MEOW', 'PURR', 'FELIX', 'LUNA', 'LION', 'TIGER', 'CHONK', 'WHISKER'];
+      const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+      const num = Math.floor(10 + Math.random() * 90);
+      const code = `${prefix}${num}`;
+      const input = document.getElementById('online-host-code-input');
+      if (input) input.value = code;
+      const display = document.getElementById('host-active-code-display');
+      if (display) display.textContent = code;
+      return code;
     }
 
-    function joinOnlineRoom() {
-      const inp = document.getElementById('online-room-code-input');
-      const code = (inp?.value || '').trim().toUpperCase();
-      if (!code) {
-        showToast('Enter a valid Room Code');
-        return;
+    function openHostOnlineModal() {
+      if (!document.getElementById('online-host-code-input')?.value) {
+        generateRandomHostCode();
       }
-      connectToOnlineRoom(code, 'b', false);
+      renderMultiplayerVotingGrid();
+      openModal('modal-online');
+      setTimeout(() => {
+        document.getElementById('online-host-code-input')?.focus();
+      }, 100);
     }
 
-    function connectToOnlineRoom(code, roleColor, isHost = false) {
+    function openJoinOnlineModal(presetCode) {
+      renderMultiplayerVotingGrid();
+      openModal('modal-online');
+      const joinInp = document.getElementById('online-join-code-input');
+      if (joinInp) {
+        if (presetCode) joinInp.value = presetCode.trim().toUpperCase();
+        setTimeout(() => {
+          joinInp.focus();
+          joinInp.select();
+        }, 100);
+      }
+    }
+
+    function copyHostRoomCode() {
+      const code = (document.getElementById('online-host-code-input')?.value || appState.online.roomCode || 'CAT7').trim().toUpperCase();
+      copyDirectText(code, `📋 Code "${code}" copied to clipboard! Send to your friend.`);
+    }
+
+    function copyHostInviteLink() {
+      const code = (document.getElementById('online-host-code-input')?.value || appState.online.roomCode || 'CAT7').trim().toUpperCase();
+      const url = `${window.location.origin}${window.location.pathname}?room=${code}`;
+      copyDirectText(url, `🔗 1-Click invite link copied! Send to your friend.`);
+    }
+
+    function copyDirectText(text, successToast) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast(successToast);
+        }).catch(() => fallbackCopyDirect(text));
+      } else {
+        fallbackCopyDirect(text);
+      }
+    }
+
+    function fallbackCopyDirect(text) {
+      const el = document.createElement('textarea');
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      showToast('📋 Copied to clipboard!');
+    }
+
+    function startHostingOnlineGame() {
+      let code = (document.getElementById('online-host-code-input')?.value || '').trim().toUpperCase();
+      if (!code) {
+        code = generateRandomHostCode();
+      }
+      code = code.replace(/[^A-Z0-9]/g, '');
+      if (!code) code = 'CAT7';
+
       appState.online.roomCode = code;
-      appState.online.myColor = roleColor;
-      appState.online.connected = true;
-      appState.online.isHost = isHost;
+      appState.online.isHost = true;
+      appState.online.myColor = 'w';
+      appState.online.connected = false;
       appState.gameMode = 'online';
 
-      const statusDetail = document.getElementById('online-status-detail');
-      const badge = document.getElementById('online-room-badge');
-      if (badge) badge.textContent = `Connecting • ${code}`;
+      document.getElementById('host-action-idle')?.classList.add('hidden');
+      document.getElementById('host-action-active')?.classList.remove('hidden');
+      const display = document.getElementById('host-active-code-display');
+      if (display) display.textContent = code;
 
-      // 1. BroadcastChannel fallback for multi-tab testing
+      const badge = document.getElementById('online-room-badge');
+      const detail = document.getElementById('online-status-detail');
+      if (badge) badge.textContent = `Hosting • ${code}`;
+      if (detail) detail.textContent = `🟢 Waiting for friend to join with code: ${code}`;
+
       if (appState.online.channel) {
         try { appState.online.channel.close(); } catch (e) {}
       }
       if (typeof BroadcastChannel !== 'undefined') {
-        const ch = new BroadcastChannel('pawns_paws_room_' + code);
+        const ch = new BroadcastChannel('pawns_paws_room_' + formatPeerRoomId(code));
         ch.onmessage = (ev) => handleIncomingNetworkMessage(ev.data);
         appState.online.channel = ch;
       }
 
-      // 2. Real-Time Peer-to-Peer WebRTC over PeerJS
       if (typeof Peer !== 'undefined') {
         try {
-          if (peerConn) {
-            try { peerConn.close(); } catch (e) {}
-            peerConn = null;
-          }
-          if (peerInstance) {
-            try { peerInstance.destroy(); } catch (e) {}
-            peerInstance = null;
-          }
+          if (peerConn) { try { peerConn.close(); } catch (e) {} peerConn = null; }
+          if (peerInstance) { try { peerInstance.destroy(); } catch (e) {} peerInstance = null; }
 
           const targetPeerId = formatPeerRoomId(code);
+          peerInstance = new Peer(targetPeerId);
 
-          if (isHost) {
-            peerInstance = new Peer(targetPeerId);
-            peerInstance.on('open', () => {
-              if (statusDetail) statusDetail.textContent = '🟢 Host ready! Share invite link with friend.';
-              if (badge) badge.textContent = `Host Ready • ${code}`;
-              showToast(`🌐 Room ${code} created! Send link to friend.`);
-            });
-            peerInstance.on('connection', (conn) => {
-              peerConn = conn;
-              setupPeerConnectionListeners(conn, 'Host', code);
-              setTimeout(() => {
-                if (conn && conn.open) {
-                  conn.send({
-                    type: 'room_welcome',
-                    themeId: appState.themeId,
-                    fen: chessEngine ? chessEngine.fen() : 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
-                  });
-                }
-              }, 400);
-              showToast('🐱 Friend joined your room! Match starting.');
-            });
-            peerInstance.on('error', (err) => {
-              console.warn('PeerJS Host warning:', err);
-              if (err.type === 'unavailable-id') {
-                showToast('Room code in use, creating fresh room...');
-                createOnlineRoom();
-              }
-            });
-          } else {
-            peerInstance = new Peer();
-            peerInstance.on('open', () => {
-              if (statusDetail) statusDetail.textContent = 'Connecting to host...';
-              peerConn = peerInstance.connect(targetPeerId, { reliable: true });
-              setupPeerConnectionListeners(peerConn, 'Guest', code);
-            });
-            peerInstance.on('error', (err) => {
-              console.warn('PeerJS Guest warning:', err);
-              showToast('⚠️ Could not connect to host. Make sure host created room first!');
-            });
-          }
+          peerInstance.on('open', () => {
+            showToast(`👑 Room ${code} is live! Waiting for friend.`);
+          });
+
+          peerInstance.on('connection', (conn) => {
+            peerConn = conn;
+            setupPeerConnectionListeners(conn, 'Host', code);
+            launchOnlineMatchAsHost(code);
+          });
+
+          peerInstance.on('error', (err) => {
+            console.warn('PeerJS Host warning:', err);
+            if (err.type === 'unavailable-id') {
+              showToast(`Code ${code} is already in use. Generated a fresh code!`);
+              generateRandomHostCode();
+              startHostingOnlineGame();
+            }
+          });
         } catch (err) {
-          console.warn('PeerJS init failed, relying on local channel:', err);
+          console.warn('PeerJS initialization error:', err);
         }
       }
+    }
 
-      const activeBadge = document.getElementById('badge-active-mode');
-      if (activeBadge) activeBadge.textContent = `Online • ${code}`;
+    function cancelHostingOnlineGame() {
+      if (peerConn) { try { peerConn.close(); } catch (e) {} peerConn = null; }
+      if (peerInstance) { try { peerInstance.destroy(); } catch (e) {} peerInstance = null; }
+      if (appState.online.channel) { try { appState.online.channel.close(); } catch (e) {} appState.online.channel = null; }
+      appState.online.connected = false;
+      appState.online.isHost = false;
+      document.getElementById('host-action-idle')?.classList.remove('hidden');
+      document.getElementById('host-action-active')?.classList.add('hidden');
+      const badge = document.getElementById('online-room-badge');
+      const detail = document.getElementById('online-status-detail');
+      if (badge) badge.textContent = 'WebRTC P2P Ready';
+      if (detail) detail.textContent = '• Real-time multiplayer across different devices';
+      showToast('Hosting cancelled.');
+    }
+
+    function joinOnlineGameWithCode() {
+      const input = document.getElementById('online-join-code-input');
+      let code = (input?.value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (!code) {
+        showToast('⚠️ Please enter the host\'s room code first!');
+        if (input) input.focus();
+        return;
+      }
+
+      appState.online.roomCode = code;
+      appState.online.isHost = false;
+      appState.online.myColor = 'b';
+      appState.online.connected = false;
+      appState.gameMode = 'online';
+
+      const badge = document.getElementById('online-room-badge');
+      const detail = document.getElementById('online-status-detail');
+      const hint = document.getElementById('join-status-hint');
+      if (badge) badge.textContent = `Joining • ${code}`;
+      if (detail) detail.textContent = `Connecting to host ${code}...`;
+      if (hint) hint.innerHTML = `<span class="animate-pulse text-amber-300">⏳ Connecting to host room <strong>${code}</strong>...</span>`;
+
+      if (appState.online.channel) {
+        try { appState.online.channel.close(); } catch (e) {}
+      }
+      if (typeof BroadcastChannel !== 'undefined') {
+        const ch = new BroadcastChannel('pawns_paws_room_' + formatPeerRoomId(code));
+        ch.onmessage = (ev) => handleIncomingNetworkMessage(ev.data);
+        appState.online.channel = ch;
+        ch.postMessage({ type: 'guest_join_intent', code });
+      }
+
+      if (typeof Peer !== 'undefined') {
+        try {
+          if (peerConn) { try { peerConn.close(); } catch (e) {} peerConn = null; }
+          if (peerInstance) { try { peerInstance.destroy(); } catch (e) {} peerInstance = null; }
+
+          peerInstance = new Peer();
+          const targetId = formatPeerRoomId(code);
+
+          peerInstance.on('open', () => {
+            peerConn = peerInstance.connect(targetId, { reliable: true });
+            setupPeerConnectionListeners(peerConn, 'Guest', code);
+          });
+
+          peerInstance.on('error', (err) => {
+            console.warn('PeerJS Guest error:', err);
+            if (hint) hint.innerHTML = `<span class="text-rose-400">⚠️ Could not reach host for "${code}". Check code or ensure host is waiting!</span>`;
+            showToast(`⚠️ Could not reach host for code "${code}".`);
+          });
+        } catch (err) {
+          console.warn('PeerJS join error:', err);
+        }
+      }
+    }
+
+    function launchOnlineMatchAsHost(code) {
+      appState.gameMode = 'online';
+      appState.online.roomCode = code;
+      appState.online.myColor = 'w';
+      appState.online.isHost = true;
+      appState.online.connected = true;
+      appState.boardFlipped = false;
+
+      const res = resolveWinningVotedMap();
+      applyThemeById(res.winnerId);
+
+      closeModal('modal-online');
+      switchScreenView('match');
+      startConfiguredNewGame();
+
+      const startPayload = {
+        type: 'match_start',
+        code: code,
+        themeId: res.winnerId,
+        fen: chessEngine.fen(),
+        hostColor: 'w',
+        guestColor: 'b'
+      };
+
+      setTimeout(() => {
+        if (peerConn && peerConn.open) {
+          try { peerConn.send(startPayload); } catch (e) {}
+        }
+        if (appState.online.channel) {
+          try { appState.online.channel.postMessage(startPayload); } catch (e) {}
+        }
+      }, 250);
+
+      showToast(`🎉 Friend joined room ${code}! You are White ⚪ — make your first move!`);
+      playSoundEffect('gameStart');
+      appendMatchChatMessage('Arena', `Multiplayer match started! Room: ${code}. Host (White ⚪) vs Guest (Black ⚫).`, 'system');
+    }
+
+    function launchOnlineMatchAsGuest(data) {
+      appState.gameMode = 'online';
+      appState.online.roomCode = data.code || appState.online.roomCode;
+      appState.online.myColor = 'b';
+      appState.online.isHost = false;
+      appState.online.connected = true;
+      appState.boardFlipped = true;
+
+      if (data.themeId) applyThemeById(data.themeId);
+
+      closeModal('modal-online');
+      switchScreenView('match');
+      startConfiguredNewGame();
+
+      if (data.fen && chessEngine) {
+        chessEngine.load(data.fen);
+        sync3DPiecesWithChessState(true);
+        renderMoveHistoryTable();
+        updateGameStatusBanner();
+      }
+      setCameraPlayMode(camState.playMode);
+
+      showToast(`🎉 Connected to Host on room ${data.code || appState.online.roomCode}! You are Black ⚫. White moves first.`);
+      playSoundEffect('gameStart');
+      appendMatchChatMessage('Arena', `Connected to room ${data.code}! You are Black ⚫. White moves first.`, 'system');
     }
 
     function setupPeerConnectionListeners(conn, roleName, code) {
@@ -7626,7 +7906,7 @@
       });
 
       conn.on('close', () => {
-        showToast('⚠️ Friend disconnected from room.');
+        showToast('⚠️ Opponent disconnected from room.');
         const badge = document.getElementById('online-room-badge');
         if (badge) badge.textContent = `Disconnected • ${code}`;
       });
@@ -7634,9 +7914,15 @@
 
     function handleIncomingNetworkMessage(data) {
       if (!data) return;
-      if (data.type === 'move' && data.moveSpec) {
+      if (data.type === 'match_start') {
+        launchOnlineMatchAsGuest(data);
+      } else if (data.type === 'guest_join_intent') {
+        if (appState.online.isHost && appState.online.roomCode === data.code) {
+          launchOnlineMatchAsHost(data.code);
+        }
+      } else if (data.type === 'move' && data.moveSpec) {
         executeValidatedMove(data.moveSpec, false, true);
-        showToast('🐾 Opponent made a move!');
+        showToast('🐾 Opponent made a move! Your turn.');
       } else if (data.type === 'vote' && data.mapId) {
         mpVotingState.opponentVotedMap = data.mapId;
         renderMultiplayerVotingGrid();
@@ -7645,15 +7931,14 @@
         appendMatchChatMessage(data.sender || 'Opponent', data.text, 'opp');
       } else if (data.type === 'reaction' && data.emoji) {
         spawnFloatingEmojiOnBoard(data.emoji, true);
-      } else if (data.type === 'room_welcome') {
-        if (data.themeId) applyThemeById(data.themeId);
-        if (data.fen && chessEngine) {
-          chessEngine.load(data.fen);
-          sync3DPiecesWithChessState(true);
-          renderMoveHistoryTable();
-          updateGameStatusBanner();
-        }
-        showToast('🎮 Synced with host room!');
+      } else if (data.type === 'resign') {
+        showToast('🏳️ Opponent resigned! You win!');
+        const winnerName = appState.online.myColor === 'w' ? 'White ⚪ (You)' : 'Black ⚫ (You)';
+        document.getElementById('gameover-icon').textContent = '🏆';
+        document.getElementById('gameover-title').textContent = `${winnerName} Wins!`;
+        document.getElementById('gameover-subtitle').textContent = 'Opponent conceded the match.';
+        openModal('modal-gameover');
+        playSoundEffect('victory');
       }
     }
 
@@ -7667,33 +7952,19 @@
     }
 
     function copyOnlineRoomCode() {
-      copyTextField('online-room-code-input', 'Room Code copied!');
+      copyHostRoomCode();
     }
 
     function copyOnlineRoomInviteLink() {
-      const code = (document.getElementById('online-room-code-input')?.value || '').trim().toUpperCase();
-      if (!code) {
-        showToast('Create a room code first!');
-        return;
-      }
-      const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${code}`;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(inviteUrl).then(() => {
-          showToast('🔗 Invite Link copied! Send to your friend.');
-        }).catch(() => fallbackCopyDirect(inviteUrl));
-      } else {
-        fallbackCopyDirect(inviteUrl);
-      }
+      copyHostInviteLink();
     }
 
-    function fallbackCopyDirect(text) {
-      const el = document.createElement('textarea');
-      el.value = text;
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand('copy');
-      document.body.removeChild(el);
-      showToast('🔗 Invite Link copied!');
+    function createOnlineRoom() {
+      startHostingOnlineGame();
+    }
+
+    function joinOnlineRoom() {
+      joinOnlineGameWithCode();
     }
 
     function checkUrlForRoomInvite() {
@@ -7701,14 +7972,14 @@
         const params = new URLSearchParams(window.location.search);
         const room = params.get('room');
         if (room) {
-          const cleanCode = room.trim().toUpperCase();
-          const inp = document.getElementById('online-room-code-input');
-          if (inp) inp.value = cleanCode;
+          const cleanCode = room.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+          const joinInp = document.getElementById('online-join-code-input');
+          if (joinInp) joinInp.value = cleanCode;
           showToast(`🎮 Room invite detected: ${cleanCode}`);
-          openMultiplayerMapVotingModal();
+          openJoinOnlineModal(cleanCode);
           setTimeout(() => {
-            connectToOnlineRoom(cleanCode, 'b', false);
-          }, 600);
+            joinOnlineGameWithCode();
+          }, 700);
         }
       } catch (e) {}
     }
@@ -7866,8 +8137,20 @@
         if (badge) badge.textContent = 'Spectator Match';
         document.getElementById('name-player-top').textContent = 'Master_Felix';
         document.getElementById('name-player-bottom').textContent = 'Emperor_Maine';
+      } else if (appState.gameMode === 'online') {
+        const isWhite = appState.online.myColor === 'w';
+        const myTag = appState.online.isHost ? 'Host' : 'Guest';
+        const oppTag = appState.online.isHost ? 'Guest' : 'Host';
+        if (badge) badge.textContent = `Online • ${appState.online.roomCode || 'Match'}`;
+        document.getElementById('name-player-top').textContent = `Opponent (${isWhite ? 'Black ⚫' : 'White ⚪'})`;
+        document.getElementById('tag-player-top').textContent = `(${oppTag})`;
+        if (ratingTopEl) ratingTopEl.textContent = '1500';
+        document.getElementById('name-player-bottom').textContent = `You (${isWhite ? 'White ⚪' : 'Black ⚫'})`;
+        document.getElementById('tag-player-bottom').textContent = `(${myTag})`;
+        if (ratingBotEl) ratingBotEl.textContent = '1500';
+        appState.boardFlipped = !isWhite;
       } else {
-        if (badge) badge.textContent = 'Online Match';
+        if (badge) badge.textContent = 'Pawns & Paws';
       }
 
       setCameraPlayMode(camState.playMode);
