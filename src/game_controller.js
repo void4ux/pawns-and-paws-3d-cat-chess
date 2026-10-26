@@ -1178,13 +1178,15 @@
       camState.followMoves = !camState.followMoves;
       const btns = [
         document.getElementById('btn-cam-follow'),
-        document.getElementById('btn-pov-cam-toggle')
+        document.getElementById('btn-pov-cam-toggle'),
+        document.getElementById('btn-options-action-pov')
       ];
       btns.forEach((btn) => {
         if (!btn) return;
         btn.textContent = `🎥 Action POV: ${camState.followMoves ? 'ON' : 'OFF'}`;
-        btn.classList.toggle('text-[#629924]', camState.followMoves);
-        btn.classList.toggle('bg-[#629924]/20', camState.followMoves);
+        btn.classList.toggle('text-[#81b64c]', camState.followMoves);
+        btn.classList.toggle('border-[#81b64c]/40', camState.followMoves);
+        btn.classList.toggle('text-zinc-400', !camState.followMoves);
       });
       showToast(`Action POV: ${camState.followMoves ? 'ON' : 'OFF'}`);
       playSoundEffect('click');

@@ -501,22 +501,22 @@
       const isWhite = color === 'w';
       const rig = new THREE.Group();
 
-      // Start cats in a natural mix of normal alert sitting (with blinking) and staggered random behaviors
-      const initialBehaviors = ['normalSit', 'normalSit', 'normalSit', 'lickingPaw', 'slowEyeClose', 'grumpyScowl', 'lickingShoulder', 'kneadingPaws', 'yawning', 'curiousTilt'];
+      // Start cats in an alert, wide-eyed, upright sitting posture
+      const initialBehaviors = ['normalSit', 'normalSit', 'curiousTilt', 'normalSit', 'lickingPaw'];
       const initBeh = initialBehaviors[Math.floor(Math.random() * initialBehaviors.length)];
 
       rig.userData = {
         type,
         color,
         phaseOffset: Math.random() * Math.PI * 2,
-        nextBlinkTime: performance.now() + 600 + Math.random() * 1900,
+        nextBlinkTime: performance.now() + 1500 + Math.random() * 2500,
         isBlinking: false,
         blinkStart: 0,
-        blinkDuration: 210,
+        blinkDuration: 180,
         isDoubleBlink: false,
         behaviorState: initBeh,
         behaviorStart: performance.now() - Math.random() * 1500,
-        behaviorDuration: initBeh === 'normalSit' ? (3200 + Math.random() * 4200) : (2600 + Math.random() * 2200),
+        behaviorDuration: initBeh === 'normalSit' ? (3600 + Math.random() * 4200) : (2600 + Math.random() * 2200),
         eyeClosure: 0
       };
 
@@ -527,11 +527,14 @@
       const muzzleShadeHex = isWhite ? '#f1ece4' : '#322e2b';
       const eyePair = getCurrentEyeColors();
 
+      // Brilliant high-contrast jewel feline eye colors (Sapphire, Emerald, Amber Gold)
       let eyeHex = isWhite ? eyePair.white : eyePair.black;
       if (type === 'p' || type === 'b') {
-        eyeHex = isWhite ? '#cbe81e' : '#f59e0b';
+        eyeHex = isWhite ? '#10b981' : '#f59e0b'; // Vivid Emerald / Golden Amber
       } else if (isWhite) {
-        eyeHex = '#38bdf8';
+        eyeHex = '#38bdf8'; // Icy Sapphire Blue
+      } else {
+        eyeHex = '#f59e0b'; // Radiant Feline Amber
       }
 
       const collarHex = (type === 'q')
@@ -623,130 +626,95 @@
       const isKnight = type === 'n';
       const isPawn = type === 'p';
 
-      const bodyScaleW = isKing ? 1.54 : (isRook ? 1.30 : (isQueen ? 0.84 : (isPawn ? 0.96 : 1.02)));
-      const bodyScaleH = isKing ? 1.22 : (isQueen ? 1.36 : (isRook ? 1.15 : (isPawn ? 0.92 : 1.04)));
+      // Authentic feline sitting proportions: tall, upright, slender (not a wide dumpling)
+      const bodyScaleW = isKing ? 1.08 : (isRook ? 1.02 : (isQueen ? 0.86 : (isPawn ? 0.82 : 0.92)));
+      const bodyScaleH = isKing ? 1.34 : (isQueen ? 1.42 : (isRook ? 1.24 : (isPawn ? 1.04 : 1.18)));
 
-      // 2. Sculpted Seated Haunches, Thigh Bulges, Shoulder Blades & Soft Belly Patch
-      const haunchMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(0.245 * bodyScaleW, 24, 20),
-        furMat
-      );
-      haunchMesh.scale.set(1.06, (isQueen ? 0.78 : 0.95) * bodyScaleH, 1.16);
-      haunchMesh.position.set(0, (isQueen ? 0.38 : 0.21) * bodyScaleH, -0.07);
-      haunchMesh.castShadow = true;
-      bodyGroup.add(haunchMesh);
-
-      // Left & Right Seated Hind Thigh Bulges + Upper Hip Creases
-      [-0.178 * bodyScaleW, 0.178 * bodyScaleW].forEach((tx) => {
-        const thighBulge = new THREE.Mesh(
-          new THREE.SphereGeometry(0.148 * bodyScaleW, 18, 16),
-          furMat
-        );
-        thighBulge.scale.set(0.94, 1.20, 1.14);
-        thighBulge.position.set(tx, 0.185 * bodyScaleH, -0.015);
-        thighBulge.castShadow = true;
-        bodyGroup.add(thighBulge);
-
-        // Knee/Hock joint curve
-        const kneeJoint = new THREE.Mesh(
-          new THREE.SphereGeometry(0.088 * bodyScaleW, 12, 10),
-          furMat
-        );
-        kneeJoint.scale.set(0.9, 0.85, 1.15);
-        kneeJoint.position.set(tx * 0.96, 0.105 * bodyScaleH, 0.045);
-        bodyGroup.add(kneeJoint);
-      });
-
-      const lathePts = isQueen
-        ? [
-            new THREE.Vector2(0.01, 0.22 * bodyScaleH),
-            new THREE.Vector2(0.18 * bodyScaleW, 0.28 * bodyScaleH),
-            new THREE.Vector2(0.16 * bodyScaleW, 0.44 * bodyScaleH),
-            new THREE.Vector2(0.19 * bodyScaleW, 0.56 * bodyScaleH),
-            new THREE.Vector2(0.11 * bodyScaleW, 0.72 * bodyScaleH),
-            new THREE.Vector2(0.01, 0.76 * bodyScaleH)
-          ]
-        : [
-            new THREE.Vector2(0.01, 0.04 * bodyScaleH),
-            new THREE.Vector2(0.245 * bodyScaleW, 0.11 * bodyScaleH),
-            new THREE.Vector2(0.255 * bodyScaleW, 0.25 * bodyScaleH),
-            new THREE.Vector2(0.215 * bodyScaleW, 0.41 * bodyScaleH),
-            new THREE.Vector2(0.165 * bodyScaleW, 0.54 * bodyScaleH),
-            new THREE.Vector2(0.01, 0.58 * bodyScaleH)
-          ];
-      const latheGeo = new THREE.LatheGeometry(lathePts, 26);
-      latheGeo.scale(1.0, 1.0, 1.08);
-      const torsoMesh = new THREE.Mesh(latheGeo, furMat);
-      torsoMesh.position.set(0, 0.02, 0.02);
+      // 2. Sculpted Feline Torso: sleek ribcage, curved waist tuck, and folded flank haunches
+      const torsoPts = [
+        new THREE.Vector2(0.01, 0.02 * bodyScaleH),
+        new THREE.Vector2(0.18 * bodyScaleW, 0.07 * bodyScaleH),
+        new THREE.Vector2(0.16 * bodyScaleW, 0.20 * bodyScaleH),
+        new THREE.Vector2(0.125 * bodyScaleW, 0.36 * bodyScaleH), // Defined feline waist tuck!
+        new THREE.Vector2(0.155 * bodyScaleW, 0.50 * bodyScaleH), // Proud ribcage/chest
+        new THREE.Vector2(0.13 * bodyScaleW, 0.62 * bodyScaleH), // Shoulders
+        new THREE.Vector2(0.095 * bodyScaleW, 0.70 * bodyScaleH), // Neck base
+        new THREE.Vector2(0.01, 0.74 * bodyScaleH)
+      ];
+      const torsoGeo = new THREE.LatheGeometry(torsoPts, 26);
+      torsoGeo.scale(1.0, 1.0, 1.12);
+      const torsoMesh = new THREE.Mesh(torsoGeo, furMat);
+      torsoMesh.position.set(0, 0.01, -0.01);
       torsoMesh.castShadow = true;
       torsoMesh.receiveShadow = true;
       bodyGroup.add(torsoMesh);
 
-      // Soft Contrasting Front Belly / Sternum Fur Patch
-      const bellyPatch = new THREE.Mesh(
-        new THREE.SphereGeometry(0.175 * bodyScaleW, 18, 14),
-        bellyMat
+      // Dedicated Feline Neck (connects shoulders to head, eliminates dumpling head-sink)
+      const neckMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.082 * bodyScaleW, 0.102 * bodyScaleW, 0.17 * bodyScaleH, 16),
+        furMat
       );
-      bellyPatch.scale.set(0.84, 1.26 * bodyScaleH, 0.62);
-      bellyPatch.position.set(0, 0.26 * bodyScaleH, 0.155 * bodyScaleW);
-      bodyGroup.add(bellyPatch);
+      neckMesh.position.set(0, 0.62 * bodyScaleH, 0.04);
+      neckMesh.rotation.x = 0.08;
+      neckMesh.castShadow = true;
+      bodyGroup.add(neckMesh);
 
-      // Sculpted Left & Right Shoulder Blades (Scapula Bulges)
-      [-0.125 * bodyScaleW, 0.125 * bodyScaleW].forEach((sx) => {
-        const scapula = new THREE.Mesh(
-          new THREE.SphereGeometry(0.105 * bodyScaleW, 14, 12),
+      // Compact Seated Flank Haunches hugging sides
+      [-0.145 * bodyScaleW, 0.145 * bodyScaleW].forEach((tx) => {
+        const haunch = new THREE.Mesh(
+          new THREE.SphereGeometry(0.125 * bodyScaleW, 16, 14),
           furMat
         );
-        scapula.scale.set(0.88, 1.18, 1.04);
-        scapula.position.set(sx, (isQueen ? 0.52 : 0.42) * bodyScaleH, 0.08);
-        scapula.castShadow = true;
-        bodyGroup.add(scapula);
+        haunch.scale.set(0.70, 1.08, 1.28);
+        haunch.position.set(tx, 0.135 * bodyScaleH, -0.03);
+        haunch.castShadow = true;
+        bodyGroup.add(haunch);
       });
 
-      // Chest & Mane Ruff + Layered Fur Chest Tufts
+      // Soft Lighter Belly & Sternum Fur Patch
+      const bellyPatch = new THREE.Mesh(
+        new THREE.SphereGeometry(0.135 * bodyScaleW, 16, 14),
+        bellyMat
+      );
+      bellyPatch.scale.set(0.80, 1.30 * bodyScaleH, 0.52);
+      bellyPatch.position.set(0, 0.35 * bodyScaleH, 0.12 * bodyScaleW);
+      bodyGroup.add(bellyPatch);
+
+      // Chest & Mane Ruff for King / Persian Queen / Rook
       if (isKing || isRook) {
-        const ruffCount = isKing ? 12 : 8;
-        const ruffRad = isKing ? 0.18 : 0.14;
+        const ruffCount = isKing ? 10 : 8;
+        const ruffRad = isKing ? 0.13 : 0.11;
         for (let ri = 0; ri < ruffCount; ri++) {
           const ang = (ri / ruffCount) * Math.PI * 2;
-          const puff = new THREE.Mesh(new THREE.SphereGeometry(ruffRad, 14, 12), ri % 2 === 0 ? furMat : bellyMat);
-          puff.scale.set(1.15, 0.92, 1.15);
+          const puff = new THREE.Mesh(new THREE.SphereGeometry(ruffRad, 12, 10), ri % 2 === 0 ? furMat : bellyMat);
+          puff.scale.set(1.15, 0.88, 1.15);
           puff.position.set(
-            Math.sin(ang) * 0.22 * bodyScaleW,
-            (isKing ? 0.40 : 0.38) * bodyScaleH + Math.cos(ang * 2) * 0.03,
-            Math.cos(ang) * 0.20 * bodyScaleW + 0.05
+            Math.sin(ang) * 0.17 * bodyScaleW,
+            (isKing ? 0.48 : 0.44) * bodyScaleH + Math.cos(ang * 2) * 0.02,
+            Math.cos(ang) * 0.15 * bodyScaleW + 0.04
           );
           puff.castShadow = true;
           bodyGroup.add(puff);
         }
       } else {
-        const chestMesh = new THREE.Mesh(
-          new THREE.SphereGeometry(0.185 * bodyScaleW, 18, 14),
-          bellyMat
-        );
-        chestMesh.scale.set(1.02, 1.12, 0.98);
-        chestMesh.position.set(0, (isQueen ? 0.54 : 0.38) * bodyScaleH, 0.125);
-        bodyGroup.add(chestMesh);
-
-        // 3 Sculpted Fluffy Chest Fur Tufts on the Sternum
-        [-0.045, 0, 0.045].forEach((tx, idx) => {
+        [-0.038, 0, 0.038].forEach((tx, idx) => {
           const chestTuft = new THREE.Mesh(
-            new THREE.ConeGeometry(0.042 * bodyScaleW, 0.11 * bodyScaleH, 8),
+            new THREE.ConeGeometry(0.036 * bodyScaleW, 0.09 * bodyScaleH, 8),
             bellyMat
           );
           chestTuft.rotation.x = 2.65;
           chestTuft.rotation.z = tx * -2.2;
-          chestTuft.position.set(tx, (isQueen ? 0.50 : 0.35 - (idx === 1 ? 0.02 : 0)) * bodyScaleH, 0.22 * bodyScaleW);
+          chestTuft.position.set(tx, (isQueen ? 0.52 : 0.40 - (idx === 1 ? 0.02 : 0)) * bodyScaleH, 0.16 * bodyScaleW);
           bodyGroup.add(chestTuft);
         });
       }
 
       // 3. Individually Articulated Front Left & Right Legs with 4 Sculpted Toes, Claws & Multi-Pad Toe Beans!
       const frontLegsGroup = new THREE.Group();
-      const legHeight = isQueen ? 0.52 * bodyScaleH : 0.31 * bodyScaleH;
-      const legRadiusTop = isKing ? 0.080 : (isQueen ? 0.038 : 0.054);
-      const legRadiusBot = isKing ? 0.066 : (isQueen ? 0.030 : 0.045);
-      const legSpreadX = isKing ? 0.185 : (isQueen ? 0.078 : 0.105 * bodyScaleW);
+      const legHeight = isQueen ? 0.46 * bodyScaleH : 0.34 * bodyScaleH;
+      const legRadiusTop = isKing ? 0.055 : (isQueen ? 0.034 : 0.044);
+      const legRadiusBot = isKing ? 0.045 : (isQueen ? 0.028 : 0.036);
+      const legSpreadX = isKing ? 0.125 : (isQueen ? 0.068 : 0.082 * bodyScaleW);
 
       frontLegsGroup.position.set(0, legHeight, 0.16);
       bodyGroup.add(frontLegsGroup);
@@ -885,40 +853,30 @@
       }
 
       // 4. Collar, Buckle & Engraved Golden Bell
-      const collarY = (isQueen ? 0.70 : 0.52) * bodyScaleH;
-      if (isQueen) {
-        const neckMesh = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.068, 0.095, 0.26 * bodyScaleH, 16),
-          furMat
-        );
-        neckMesh.position.set(0, 0.64 * bodyScaleH, 0.10);
-        neckMesh.rotation.x = 0.12;
-        bodyGroup.add(neckMesh);
-      }
-
+      const collarY = 0.58 * bodyScaleH;
       if (!isKing) {
-        const collarRadius = isQueen ? 0.085 : 0.148 * bodyScaleW;
+        const collarRadius = isQueen ? 0.082 : 0.108 * bodyScaleW;
         const collar = new THREE.Mesh(
-          new THREE.TorusGeometry(collarRadius, 0.024, 14, 28),
+          new THREE.TorusGeometry(collarRadius, 0.018, 14, 28),
           collarMat
         );
-        collar.rotation.x = Math.PI / 2 - 0.14;
-        collar.position.set(0, collarY, 0.10);
+        collar.rotation.x = Math.PI / 2 - 0.10;
+        collar.position.set(0, collarY, 0.06);
         bodyGroup.add(collar);
 
         const collarBell = new THREE.Mesh(
-          new THREE.SphereGeometry(0.036, 14, 14),
+          new THREE.SphereGeometry(0.032, 14, 14),
           goldMat
         );
-        collarBell.position.set(0, collarY - 0.026, 0.10 + collarRadius);
+        collarBell.position.set(0, collarY - 0.022, 0.06 + collarRadius);
         bodyGroup.add(collarBell);
 
         // Tiny dark bell slot groove
         const bellSlot = new THREE.Mesh(
-          new THREE.BoxGeometry(0.038, 0.008, 0.018),
+          new THREE.BoxGeometry(0.034, 0.007, 0.016),
           darkGrooveMat
         );
-        bellSlot.position.set(0, collarY - 0.036, 0.10 + collarRadius + 0.024);
+        bellSlot.position.set(0, collarY - 0.030, 0.06 + collarRadius + 0.020);
         bodyGroup.add(bellSlot);
       }
 
@@ -984,41 +942,41 @@
 
       // 6. Ultra-Detailed Sculpted Head, Cheek Ruffs, Forehead "M" Stripes, Nose Bridge, Nostrils, Fangs & Glassy Eyes
       const headGroup = new THREE.Group();
-      const headY = isQueen ? (collarY + 0.19) : (isKing ? 0.64 * bodyScaleH : collarY + 0.14);
-      headGroup.position.set(0, headY, 0.12);
+      const headY = collarY + 0.16 * bodyScaleH;
+      headGroup.position.set(0, headY, 0.08);
       bodyGroup.add(headGroup);
       rig.userData.headGroup = headGroup;
       rig.userData.baseHeadY = headY;
 
-      const headRadius = isKing ? 0.25 : (isRook ? 0.215 : (isQueen ? 0.175 : 0.205));
-      const headSphere = new THREE.Mesh(new THREE.SphereGeometry(headRadius, 28, 24), furMat);
-      headSphere.scale.set(isKing ? 1.26 : (isQueen ? 1.04 : 1.18), 0.94, 1.04);
+      const headRadius = isKing ? 0.22 : (isRook ? 0.20 : (isQueen ? 0.175 : 0.19));
+      const headSphere = new THREE.Mesh(new THREE.SphereGeometry(headRadius, 26, 22), furMat);
+      headSphere.scale.set(1.08, 0.98, 1.02);
       headSphere.castShadow = true;
       headGroup.add(headSphere);
 
-      // Plump Lower Cheek Pouches & 3-Pointed Sculpted Cheek Fur Ruffs on Left & Right!
+      // Sleek cheekbones and delicate side cheek ruffs
       [-1, 1].forEach((cSide) => {
-        const cx = cSide * 0.145 * (isKing ? 1.25 : 1.0);
-        const jowl = new THREE.Mesh(
-          new THREE.SphereGeometry(headRadius * 0.58, 18, 16),
+        const cx = cSide * headRadius * 0.72;
+        const cheekMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(headRadius * 0.38, 14, 12),
           furMat
         );
-        jowl.scale.set(1.14, 0.88, 0.96);
-        jowl.position.set(cx, -0.040, headRadius * 0.32);
-        headGroup.add(jowl);
+        cheekMesh.scale.set(0.92, 0.82, 0.96);
+        cheekMesh.position.set(cx, -0.024, headRadius * 0.42);
+        headGroup.add(cheekMesh);
 
-        // 3 Sculpted Sideburn Cheek Fur Tufts flaring outward on each cheek!
-        [-0.01, -0.042, -0.074].forEach((ty, ti) => {
+        // Delicate sleek whisker flank tufts
+        [-0.015, -0.045].forEach((ty, ti) => {
           const tuft = new THREE.Mesh(
-            new THREE.ConeGeometry(0.032 - ti * 0.004, (isKing ? 0.115 : 0.082) - ti * 0.01, 8),
+            new THREE.ConeGeometry(0.024 - ti * 0.003, 0.065 - ti * 0.01, 8),
             furMat
           );
-          tuft.rotation.z = -cSide * (Math.PI * 0.44 + ti * 0.12);
-          tuft.rotation.y = -cSide * 0.18;
+          tuft.rotation.z = -cSide * (Math.PI * 0.45 + ti * 0.10);
+          tuft.rotation.y = -cSide * 0.16;
           tuft.position.set(
-            cSide * (headRadius * (isKing ? 1.22 : 1.12)),
+            cSide * (headRadius * 1.05),
             ty,
-            headRadius * (0.22 - ti * 0.06)
+            headRadius * (0.32 - ti * 0.08)
           );
           headGroup.add(tuft);
         });
@@ -1287,69 +1245,87 @@
       rig.userData.earL = earL;
       rig.userData.earR = earR;
 
-      // Deep-Set Glassy Cat Eyes with Radial Iris Texture, Dual Catchlights & 3D Upper/Lower Eyelids
-      const eyeRadius = (isPawn || isBishop) ? 0.055 : (isQueen ? 0.049 : 0.046);
+      // 7. Large, Luminous, Almond-Shaped Feline Eyes with Dark Eyeliner & Dual Catchlights
+      const eyeRadius = (isPawn || isBishop) ? 0.070 : (isQueen ? 0.065 : 0.062);
       const upperLids = [];
       const closedEyeLines = [];
       const eyeBallGroups = [];
       const pupilMeshes = [];
 
-      [-0.082, 0.082].forEach((ex, eyeIdx) => {
+      [-1, 1].forEach((sideSign, eyeIdx) => {
+        const ex = sideSign * (headRadius * 0.40);
         const eyeGroup = new THREE.Group();
-        eyeGroup.position.set(ex, 0.024, headRadius * 0.89);
+        // Positioned forward on the facial curve (headRadius * 1.01) so eyes clearly pop out of fur
+        eyeGroup.position.set(ex, 0.038, headRadius * 1.01);
+        eyeGroup.rotation.y = sideSign * 0.12;
+        eyeGroup.rotation.z = -sideSign * 0.14; // Feline almond cat-eye tilt
 
-        // Recessed Dark Eye Socket / Eyeliner Rim
+        // Dark eyeliner rim outlining the eye
         const socketRim = new THREE.Mesh(
-          new THREE.TorusGeometry(eyeRadius * 1.05, 0.006, 8, 20),
+          new THREE.TorusGeometry(eyeRadius * 1.05, 0.009, 8, 24),
           darkGrooveMat
         );
-        socketRim.position.z = 0.008;
+        socketRim.scale.set(1.0, 1.15, 1.0);
+        socketRim.position.z = 0.006;
         eyeGroup.add(socketRim);
 
         const eyeBallWrap = new THREE.Group();
-        const iris = new THREE.Mesh(new THREE.SphereGeometry(eyeRadius, 18, 16), eyeMat);
-        iris.scale.set(1.0, 1.08, 0.58);
+        // Rich jewel-toned iris sphere
+        const iris = new THREE.Mesh(
+          new THREE.SphereGeometry(eyeRadius, 20, 18),
+          eyeMat
+        );
+        iris.scale.set(1.0, 1.12, 0.65);
         eyeBallWrap.add(iris);
 
-        const pupil = new THREE.Mesh(new THREE.SphereGeometry(eyeRadius * 0.64, 14, 12), pupilMat);
-        pupil.scale.set((isPawn || isBishop || isQueen) ? 0.76 : 0.52, 1.05, 0.62);
-        pupil.position.z = eyeRadius * 0.36;
+        // Limbal outer ring shadow inside the eye for striking depth
+        const limbalRing = new THREE.Mesh(
+          new THREE.TorusGeometry(eyeRadius * 0.88, 0.010, 8, 20),
+          new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.35 })
+        );
+        limbalRing.position.z = eyeRadius * 0.40;
+        eyeBallWrap.add(limbalRing);
+
+        // Vertical feline slit pupil
+        const pupil = new THREE.Mesh(
+          new THREE.SphereGeometry(eyeRadius * 0.48, 14, 12),
+          pupilMat
+        );
+        pupil.scale.set(0.42, 1.30, 0.65);
+        pupil.position.z = eyeRadius * 0.42;
         eyeBallWrap.add(pupil);
         pupilMeshes.push(pupil);
 
-        // Primary Top-Left Specular Catchlight
-        const catchlight1 = new THREE.Mesh(new THREE.SphereGeometry(eyeRadius * 0.25, 8, 8), catchlightMat);
-        catchlight1.position.set(-eyeRadius * 0.26, eyeRadius * 0.28, eyeRadius * 0.58);
+        // Primary glassy white catchlight (top corner)
+        const catchlight1 = new THREE.Mesh(
+          new THREE.SphereGeometry(eyeRadius * 0.28, 10, 10),
+          catchlightMat
+        );
+        catchlight1.position.set(-sideSign * eyeRadius * 0.22, eyeRadius * 0.34, eyeRadius * 0.62);
         eyeBallWrap.add(catchlight1);
 
-        // Secondary Bottom-Right Pin Catchlight for deep glassy eye realism
-        const catchlight2 = new THREE.Mesh(new THREE.SphereGeometry(eyeRadius * 0.12, 6, 6), catchlightMat);
-        catchlight2.position.set(eyeRadius * 0.24, -eyeRadius * 0.22, eyeRadius * 0.58);
+        // Secondary pin-point catchlight (bottom corner)
+        const catchlight2 = new THREE.Mesh(
+          new THREE.SphereGeometry(eyeRadius * 0.14, 8, 8),
+          catchlightMat
+        );
+        catchlight2.position.set(sideSign * eyeRadius * 0.20, -eyeRadius * 0.24, eyeRadius * 0.60);
         eyeBallWrap.add(catchlight2);
 
         eyeGroup.add(eyeBallWrap);
         eyeBallGroups.push(eyeBallWrap);
 
-        // Sculpted Heavy Upper Eyelid Hood
+        // Upper Eyelid: kept tucked UP (-0.38 rad) when open so eyes are 100% visible
         const upperLid = new THREE.Mesh(
-          new THREE.SphereGeometry(eyeRadius * 1.16, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.58),
+          new THREE.SphereGeometry(eyeRadius * 1.14, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.52),
           furMat
         );
         upperLid.scale.set(1.10, 1.02, 0.76);
-        upperLid.rotation.x = (isKing || isRook) ? 0.34 : 0.12;
+        upperLid.rotation.x = -0.38;
         eyeGroup.add(upperLid);
         upperLids.push(upperLid);
 
-        // Sculpted Lower Eyelid Cheek Rim
-        const lowerLid = new THREE.Mesh(
-          new THREE.TorusGeometry(eyeRadius * 0.98, 0.009, 6, 14, Math.PI * 0.85),
-          muzzleMat
-        );
-        lowerLid.rotation.z = Math.PI * 1.08;
-        lowerLid.position.set(0, -0.008, eyeRadius * 0.42);
-        eyeGroup.add(lowerLid);
-
-        // Curved Dark Closed-Eye Lash Line
+        // Curved dark closed-eye line (only shown during full closed blink)
         const closedArc = new THREE.Mesh(
           new THREE.TorusGeometry(eyeRadius * 0.88, 0.008, 6, 14, Math.PI * 0.88),
           darkGrooveMat
@@ -3419,7 +3395,7 @@
             const kneadR = Math.max(0, Math.sin(tSec * 6.5 + phase + Math.PI));
             targetLegLRotX = -0.45 * kneadL * env;
             targetLegRRotX = -0.45 * kneadR * env;
-            targetEyeClosure = Math.max(targetEyeClosure, 0.88 * env);
+            targetEyeClosure = 0.0;
             targetHeadRotZ = Math.sin(tSec * 3.25 + phase) * 0.10 * env;
           } else if (ud.behaviorState === 'curiousTilt') {
             // Alert curious head-tilt & wide-eyed scan
@@ -3431,23 +3407,22 @@
             targetPupilScaleX = 0.92;
           }
 
-          // Lifelike Natural Cat Blinking (including single blinks & double-blinks!)
+          // Lifelike Natural Cat Blinking (quick 180ms blink every 2.5s to 5s)
           if (!ud.isBlinking && nowMs >= ud.nextBlinkTime) {
             ud.isBlinking = true;
             ud.blinkStart = nowMs;
-            ud.isDoubleBlink = Math.random() < 0.34;
-            ud.blinkDuration = ud.isDoubleBlink ? 420 : 210;
+            ud.isDoubleBlink = Math.random() < 0.25;
+            ud.blinkDuration = ud.isDoubleBlink ? 360 : 180;
           }
           let activeBlinkAmount = 0;
           if (ud.isBlinking) {
             const bElapsed = nowMs - ud.blinkStart;
             if (bElapsed < ud.blinkDuration) {
               if (ud.isDoubleBlink) {
-                // Two crisp consecutive blinks: 0..180ms and 220..420ms
-                if (bElapsed < 180) {
-                  activeBlinkAmount = Math.sin((bElapsed / 180) * Math.PI);
-                } else if (bElapsed >= 220) {
-                  activeBlinkAmount = Math.sin(((bElapsed - 220) / 200) * Math.PI);
+                if (bElapsed < 160) {
+                  activeBlinkAmount = Math.sin((bElapsed / 160) * Math.PI);
+                } else if (bElapsed >= 200) {
+                  activeBlinkAmount = Math.sin(((bElapsed - 200) / 160) * Math.PI);
                 }
               } else {
                 activeBlinkAmount = Math.sin((bElapsed / ud.blinkDuration) * Math.PI);
@@ -3455,8 +3430,7 @@
               targetEyeClosure = Math.max(targetEyeClosure, activeBlinkAmount);
             } else {
               ud.isBlinking = false;
-              // Frequent natural cat blink interval (every 1.4s to 3.4s)
-              ud.nextBlinkTime = nowMs + 1400 + Math.random() * 2000;
+              ud.nextBlinkTime = nowMs + 2500 + Math.random() * 2500;
             }
           }
 
@@ -3507,25 +3481,24 @@
             ud.brows[1].rotation.z += (targetBrowScowl - ud.brows[1].rotation.z) * 0.2;
           }
 
-          // Apply Crisp 3D Upper Eyelid Rotation + Vertical Eyeball Squash + Pupil Dilation
-          const lerpRate = ud.isBlinking ? 0.58 : 0.24;
+          // Apply Crisp 3D Upper Eyelid Rotation (tucked UP by default, only closes during active blink)
+          const lerpRate = ud.isBlinking ? 0.65 : 0.30;
           ud.eyeClosure = (ud.eyeClosure || 0) + (targetEyeClosure - (ud.eyeClosure || 0)) * lerpRate;
           if (ud.upperLids && ud.upperLids.length === 2) {
-            const lidRotX = 0.08 + ud.eyeClosure * 1.46;
+            const lidRotX = -0.38 + ud.eyeClosure * 1.15;
             ud.upperLids[0].rotation.x = lidRotX;
             ud.upperLids[1].rotation.x = lidRotX;
           }
           if (ud.eyeBallGroups && ud.eyeBallGroups.length === 2) {
-            const squashY = Math.max(0.05, 1.0 - ud.eyeClosure * 0.94);
-            ud.eyeBallGroups[0].scale.y = squashY;
-            ud.eyeBallGroups[1].scale.y = squashY;
+            ud.eyeBallGroups[0].scale.y = 1.0;
+            ud.eyeBallGroups[1].scale.y = 1.0;
           }
           if (ud.pupilMeshes && ud.pupilMeshes.length === 2) {
             ud.pupilMeshes[0].scale.x += (targetPupilScaleX - ud.pupilMeshes[0].scale.x) * 0.15;
             ud.pupilMeshes[1].scale.x += (targetPupilScaleX - ud.pupilMeshes[1].scale.x) * 0.15;
           }
           if (ud.closedEyeLines && ud.closedEyeLines.length === 2) {
-            const isClosed = ud.eyeClosure > 0.68;
+            const isClosed = ud.eyeClosure > 0.75;
             ud.closedEyeLines[0].visible = isClosed;
             ud.closedEyeLines[1].visible = isClosed;
           }

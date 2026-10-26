@@ -564,15 +564,7 @@
             </button>
           </div>
 
-          <!-- Floating Action POV controls in 3D Viewport -->
-          <div class="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-10">
-            <button id="btn-pov-cam-toggle" onclick="toggleCameraFollow()" class="px-2.5 py-1 rounded-full bg-black/80 hover:bg-black/95 text-[#81b64c] border border-[#81b64c]/40 text-[11px] font-bold shadow-md transition flex items-center gap-1 cursor-pointer" title="Toggle dynamic Action POV camera on moves & attacks">
-              🎥 Action POV: ON
-            </button>
-            <button id="btn-pov-demo-attack" onclick="triggerDemoAttackTransition()" class="px-2.5 py-1 rounded-full bg-[#81b64c] hover:bg-[#8ecb53] text-[#1c1a17] font-extrabold text-[11px] shadow-md transition flex items-center gap-1 cursor-pointer" title="Preview cinematic POV attack animation">
-              ⚡ Test POV
-            </button>
-          </div>
+
 
           <!-- Floating Zoom Controls for inspecting pieces up close -->
           <div id="hud-zoom-controls" class="absolute bottom-3 right-3 flex flex-col gap-1 z-10">
@@ -806,11 +798,15 @@
             3D Plaza Angle
           </button>
         </div>
-        <div class="grid grid-cols-2 gap-2 pt-1">
-          <button id="btn-demo-attack" onclick="closeModal('modal-options'); triggerDemoAttackTransition();" class="cc-btn py-2 px-2.5 text-xs text-[#81b64c]">
-            🎬 Preview 3D POV
+        <div class="flex items-center justify-between pt-1 border-t border-white/10">
+          <span class="text-xs font-semibold text-zinc-300">Action POV on Moves:</span>
+          <button id="btn-options-action-pov" onclick="toggleCameraFollow()" class="cc-btn py-1.5 px-3 text-xs text-[#81b64c] font-bold" title="Toggle dynamic Action POV camera on moves & attacks">
+            🎥 Action POV: ON
           </button>
-          <button id="btn-toggle-legal" onclick="toggleShowLegalMoves()" class="cc-btn py-2 px-2.5 text-xs text-[#81b64c]">
+        </div>
+        <div class="flex items-center justify-between pt-0.5">
+          <span class="text-xs font-semibold text-zinc-300">Legal Move Dots:</span>
+          <button id="btn-toggle-legal" onclick="toggleShowLegalMoves()" class="cc-btn py-1.5 px-3 text-xs text-[#81b64c]">
             Legal Dots: ON
           </button>
         </div>
