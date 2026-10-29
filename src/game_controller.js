@@ -1281,15 +1281,18 @@
     }
 
     function resetCameraView() {
-      setCameraPlayMode(camState.playMode);
-      showToast('🎥 Camera reset');
+      if (typeof camState !== 'undefined') camState.userCameraMoved = false;
+      setCameraLockMode(true);
+      showToast('🎥 Camera reset to default');
     }
 
     function zoomCameraStep(delta) {
+      if (typeof camState !== 'undefined') camState.userCameraMoved = true;
       camState.desiredRadius = Math.max(3.0, Math.min(22.0, camState.desiredRadius + delta));
     }
 
     function orbitCameraStep(deltaTheta) {
+      if (typeof camState !== 'undefined') camState.userCameraMoved = true;
       camState.desiredTheta += deltaTheta;
     }
 

@@ -394,6 +394,7 @@
       isOrtho: false,
       followMoves: true,
       cameraLocked: true,
+      userCameraMoved: false,
       savedPreCapture: null,
       isDragging: false,
       isPanning: false,
@@ -3048,9 +3049,13 @@
       // Spawn white Paw-Print Decals along the move path (like Reference 3: 1000756618.jpg!)
       spawnPawPrintTrailOnBoard(fromPos, toPos);
 
-      // Action POV swoop only triggers if the camera is locked to board view
-      // In Movable mode (!cameraLocked), preserve player's custom POV without snapping away
-      const use3DPovTransition = Boolean(camState.followMoves !== false && camState.cameraLocked);
+      // Action POV swoop only triggers if the camera is locked to board view AND user has not moved camera
+      // In Movable mode (!cameraLocked) or custom moved POV, preserve player's POV without snapping away
+      const use3DPovTransition = Boolean(
+        camState.followMoves !== false &&
+        camState.cameraLocked &&
+        !camState.userCameraMoved
+      );
       // Snappy yet cinematic duration so the player sees the cat coil, pounce across tiles, and strike!
       let baseDuration = isCapture ? 1350 : 950;
       baseDuration = Math.max(480, baseDuration / speedMult);
@@ -3676,9 +3681,9 @@
           }
         }
 
-        // Return Camera Smoothly to saved overview view at end of move (only in lock mode)
+        // Return Camera Smoothly to saved overview view at end of move (only in lock mode without user move)
         if (rawT >= 0.88 && camState.savedPreCapture) {
-          if (camState.cameraLocked) {
+          if (camState.cameraLocked && !camState.userCameraMoved) {
             camState.lerpSpeed = 0.12;
             camState.desiredTheta = camState.savedPreCapture.theta;
             camState.desiredPhi = camState.savedPreCapture.phi;
@@ -3829,8 +3834,8 @@
       if (btnAuto) btnAuto.classList.toggle('active-pill', mode === 'overheadAuto');
       if (btnDio) btnDio.classList.toggle('active-pill', mode === 'diorama3d');
 
-      // In Movable mode (!cameraLocked), preserve the player's custom camera angle & zoom
-      if (!camState.cameraLocked) return;
+      // In Movable mode (!cameraLocked) or custom moved POV, preserve player's custom camera angle & zoom
+      if (!camState.cameraLocked || camState.userCameraMoved) return;
 
       if (mode === 'overheadAuto') {
         camState.desiredTheta = appState.boardFlipped ? Math.PI : 0;
@@ -3868,6 +3873,7 @@
         }
       }
       if (isLocked) {
+        camState.userCameraMoved = false;
         // Smoothly return camera to fixed, stable gameboard view
         camState.desiredPhi = 1.04;
         camState.desiredTheta = (typeof appState !== 'undefined' && appState.boardFlipped) ? Math.PI : 0;
@@ -3875,6 +3881,7 @@
         camState.desiredTarget.set(0, 0.25, 0);
         if (!quiet) showToast('🔒 Gameboard View Locked');
       } else {
+        camState.userCameraMoved = true;
         if (!quiet) showToast('🔓 Movable: Drag board to orbit, scroll or pinch to zoom!');
       }
       if (!quiet) playSoundEffect('click');
@@ -3907,6 +3914,9 @@
         camState.dragStartX = e.clientX;
         camState.dragStartY = e.clientY;
         camState.pointerMovedDist += Math.hypot(dx, dy);
+        if (camState.pointerMovedDist > 4) {
+          camState.userCameraMoved = true;
+        }
         camState.desiredTheta -= dx * 0.0075;
         camState.desiredPhi = Math.max(0.20, Math.min(1.44, camState.desiredPhi - dy * 0.0065));
       });
