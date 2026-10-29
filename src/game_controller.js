@@ -358,6 +358,7 @@
       aiDifficulty: 'medium',
       playerSide: 'w',
       boardFlipped: false,
+      cameraLocked: true,
       themeId: 'classic',
       captureStyle: 'cinematic',
       showLegalMoves: true,
@@ -408,7 +409,10 @@
         gamesPlayed: 0,
         wins: 0,
         captures: 0,
-        puzzlesSolved: 0
+        puzzlesSolved: 0,
+        onlineElo: 200,
+        onlineGames: 0,
+        onlineWins: 0
       },
       online: {
         roomCode: '',
@@ -1058,6 +1062,37 @@
       }
     }
 
+    function recordOnlineEloIncrease(reason, amount = 15) {
+      if (typeof appState.stats.onlineElo !== 'number' || isNaN(appState.stats.onlineElo) || appState.stats.onlineElo <= 0) {
+        appState.stats.onlineElo = 200;
+      }
+      appState.stats.onlineElo += amount;
+      savePersistedState();
+      updateOnlineEloUI();
+      showToast(`📈 Online ELO +${amount} (${reason})! Current: ${appState.stats.onlineElo}`);
+    }
+
+    function updateOnlineEloUI() {
+      const elo = appState.stats.onlineElo || 200;
+      const ratingBotEl = document.getElementById('rating-badge-bottom');
+      const tagBotEl = document.getElementById('tag-player-bottom');
+      const statOnlineEloEl = document.getElementById('stat-online-elo');
+      const lobbyEloEl = document.getElementById('online-lobby-elo');
+
+      if (statOnlineEloEl) statOnlineEloEl.textContent = String(elo);
+      if (lobbyEloEl) lobbyEloEl.textContent = `${elo} ELO`;
+
+      if (ratingBotEl) ratingBotEl.textContent = String(elo);
+      if (tagBotEl) {
+        if (appState.gameMode === 'online') {
+          const myTag = appState.online.isHost ? 'Host' : 'Guest';
+          tagBotEl.textContent = `(${myTag} • ${elo})`;
+        } else {
+          tagBotEl.textContent = `(${elo})`;
+        }
+      }
+    }
+
     function checkAndHandleGameOver() {
       if (!chessEngine || !chessEngine.game_over()) return;
       appState.stats.gamesPlayed++;
@@ -1068,20 +1103,33 @@
 
       if (chessEngine.in_checkmate()) {
         const whiteWon = chessEngine.turn() === 'b';
-        if ((whiteWon && appState.playerSide === 'w') || (!whiteWon && appState.playerSide === 'b')) {
+        const isPlayerWhite = (appState.gameMode === 'online') ? (appState.online.myColor === 'w') : (appState.playerSide === 'w');
+        const playerWon = (whiteWon && isPlayerWhite) || (!whiteWon && !isPlayerWhite);
+        if (playerWon) {
           appState.stats.wins++;
+          if (appState.gameMode === 'online') {
+            appState.stats.onlineWins = (appState.stats.onlineWins || 0) + 1;
+            recordOnlineEloIncrease('Checkmate Victory', 25);
+          }
           playSoundEffect('victory');
         } else {
           playSoundEffect('defeat');
         }
         if (iconEl) iconEl.textContent = '👑';
         if (titleEl) titleEl.textContent = whiteWon ? 'White Cats Win by Checkmate!' : 'Black Cats Win by Checkmate!';
-        if (subEl) subEl.textContent = 'Victory in the Coastal Cat Plaza.';
+        if (subEl) {
+          subEl.textContent = appState.gameMode === 'online'
+            ? (playerWon ? `Victory in Cat Plaza! Rating: ${appState.stats.onlineElo} ELO (+25)` : 'Online match concluded.')
+            : 'Victory in the Coastal Cat Plaza.';
+        }
       } else {
         playSoundEffect('gameStart');
+        if (appState.gameMode === 'online') {
+          recordOnlineEloIncrease('Draw', 10);
+        }
         if (iconEl) iconEl.textContent = '🤝';
         if (titleEl) titleEl.textContent = 'Game Drawn (½-½)';
-        if (subEl) subEl.textContent = 'Draw declared under standard FIDE / Lichess rules.';
+        if (subEl) subEl.textContent = appState.gameMode === 'online' ? `Game Drawn. Rating: ${appState.stats.onlineElo} ELO (+10)` : 'Draw declared under standard FIDE / Lichess rules.';
       }
 
       savePersistedState();
@@ -1140,6 +1188,15 @@
       appState.clock.gameOverByTimeout = true;
       playSoundEffect('defeat');
       const winner = expiredColor === 'w' ? 'Black' : 'White';
+      if (appState.gameMode === 'online') {
+        const isWhite = appState.online.myColor === 'w';
+        const playerWon = (expiredColor === 'b' && isWhite) || (expiredColor === 'w' && !isWhite);
+        if (playerWon) {
+          appState.stats.wins++;
+          appState.stats.onlineWins = (appState.stats.onlineWins || 0) + 1;
+          recordOnlineEloIncrease('Timeout Win', 25);
+        }
+      }
       document.getElementById('gameover-icon').textContent = '⏱️';
       document.getElementById('gameover-title').textContent = `${winner} Wins on Time!`;
       document.getElementById('gameover-subtitle').textContent = 'Flag fallen on the Lichess clock.';
@@ -1321,6 +1378,9 @@
     function offerOrAgreeDraw() {
       if (!chessEngine || chessEngine.game_over()) return;
       playSoundEffect('gameStart');
+      if (appState.gameMode === 'online') {
+        recordOnlineEloIncrease('Mutual Draw', 10);
+      }
       document.getElementById('gameover-icon').textContent = '🤝';
       document.getElementById('gameover-title').textContent = 'Draw by Mutual Agreement (½-½)';
       document.getElementById('gameover-subtitle').textContent = 'Both sides agreed to a draw.';
@@ -1836,13 +1896,17 @@
       switchScreenView('match');
       startConfiguredNewGame();
 
+      appState.stats.onlineGames = (appState.stats.onlineGames || 0) + 1;
+      recordOnlineEloIncrease('Online Match', 15);
+
       const startPayload = {
         type: 'match_start',
         code: code,
         themeId: res.winnerId,
         fen: chessEngine.fen(),
         hostColor: 'w',
-        guestColor: 'b'
+        guestColor: 'b',
+        elo: appState.stats.onlineElo || 200
       };
 
       setTimeout(() => {
@@ -1868,10 +1932,20 @@
       appState.boardFlipped = true;
 
       if (data.themeId) applyThemeById(data.themeId);
+      if (data.elo) appState.online.opponentElo = data.elo;
 
       closeModal('modal-online');
       switchScreenView('match');
       startConfiguredNewGame();
+
+      appState.stats.onlineGames = (appState.stats.onlineGames || 0) + 1;
+      recordOnlineEloIncrease('Online Match', 15);
+
+      const guestInfo = { type: 'guest_info', elo: appState.stats.onlineElo || 200 };
+      setTimeout(() => {
+        if (peerConn && peerConn.open) { try { peerConn.send(guestInfo); } catch (e) {} }
+        if (appState.online.channel) { try { appState.online.channel.postMessage(guestInfo); } catch (e) {} }
+      }, 350);
 
       if (data.fen && chessEngine) {
         chessEngine.load(data.fen);
@@ -1926,12 +2000,21 @@
         appendMatchChatMessage(data.sender || 'Opponent', data.text, 'opp');
       } else if (data.type === 'reaction' && data.emoji) {
         spawnFloatingEmojiOnBoard(data.emoji, true);
+      } else if (data.type === 'guest_info' && data.elo) {
+        appState.online.opponentElo = data.elo;
+        const ratingTopEl = document.getElementById('rating-badge-top');
+        const tagTopEl = document.getElementById('tag-player-top');
+        if (ratingTopEl) ratingTopEl.textContent = String(data.elo);
+        if (tagTopEl) tagTopEl.textContent = `(Guest • ${data.elo})`;
       } else if (data.type === 'resign') {
         showToast('🏳️ Opponent resigned! You win!');
+        appState.stats.wins++;
+        appState.stats.onlineWins = (appState.stats.onlineWins || 0) + 1;
+        recordOnlineEloIncrease('Opponent Concession', 25);
         const winnerName = appState.online.myColor === 'w' ? 'White ⚪ (You)' : 'Black ⚫ (You)';
         document.getElementById('gameover-icon').textContent = '🏆';
         document.getElementById('gameover-title').textContent = `${winnerName} Wins!`;
-        document.getElementById('gameover-subtitle').textContent = 'Opponent conceded the match.';
+        document.getElementById('gameover-subtitle').textContent = `Opponent conceded the match. Rating: ${appState.stats.onlineElo} ELO (+25)`;
         openModal('modal-gameover');
         playSoundEffect('victory');
       }
@@ -2110,6 +2193,8 @@
       const ratingTopEl = document.getElementById('rating-badge-top');
       const ratingBotEl = document.getElementById('rating-badge-bottom');
 
+      const myElo = appState.stats.onlineElo || 200;
+
       if (appState.gameMode === 'ai') {
         const isBlack = appState.playerSide === 'b';
         if (badge) badge.textContent = `10+0`;
@@ -2119,15 +2204,15 @@
           document.getElementById('tag-player-top').textContent = `(${topElo})`;
           if (ratingTopEl) ratingTopEl.textContent = topElo;
           document.getElementById('name-player-bottom').textContent = 'checknimga (Black ⚫)';
-          document.getElementById('tag-player-bottom').textContent = '(1500)';
-          if (ratingBotEl) ratingBotEl.textContent = '1500';
+          document.getElementById('tag-player-bottom').textContent = `(${myElo})`;
+          if (ratingBotEl) ratingBotEl.textContent = String(myElo);
         } else {
           document.getElementById('name-player-top').textContent = `${botName} (Black ⚫)`;
           document.getElementById('tag-player-top').textContent = `(${topElo})`;
           if (ratingTopEl) ratingTopEl.textContent = topElo;
           document.getElementById('name-player-bottom').textContent = 'checknimga (White ⚪)';
-          document.getElementById('tag-player-bottom').textContent = '(1500)';
-          if (ratingBotEl) ratingBotEl.textContent = '1500';
+          document.getElementById('tag-player-bottom').textContent = `(${myElo})`;
+          if (ratingBotEl) ratingBotEl.textContent = String(myElo);
         }
         appState.boardFlipped = isBlack;
       } else if (appState.gameMode === 'local') {
@@ -2136,8 +2221,8 @@
         document.getElementById('tag-player-top').textContent = '(1500)';
         if (ratingTopEl) ratingTopEl.textContent = '1500';
         document.getElementById('name-player-bottom').textContent = 'checknimga';
-        document.getElementById('tag-player-bottom').textContent = '(1500)';
-        if (ratingBotEl) ratingBotEl.textContent = '1500';
+        document.getElementById('tag-player-bottom').textContent = `(${myElo})`;
+        if (ratingBotEl) ratingBotEl.textContent = String(myElo);
         appState.boardFlipped = false;
       } else if (appState.gameMode === 'aivsai') {
         if (badge) badge.textContent = 'Spectator Match';
@@ -2147,13 +2232,14 @@
         const isWhite = appState.online.myColor === 'w';
         const myTag = appState.online.isHost ? 'Host' : 'Guest';
         const oppTag = appState.online.isHost ? 'Guest' : 'Host';
+        const oppElo = appState.online.opponentElo || 200;
         if (badge) badge.textContent = `Online • ${appState.online.roomCode || 'Match'}`;
         document.getElementById('name-player-top').textContent = `Opponent (${isWhite ? 'Black ⚫' : 'White ⚪'})`;
-        document.getElementById('tag-player-top').textContent = `(${oppTag})`;
-        if (ratingTopEl) ratingTopEl.textContent = '1500';
+        document.getElementById('tag-player-top').textContent = `(${oppTag} • ${oppElo})`;
+        if (ratingTopEl) ratingTopEl.textContent = String(oppElo);
         document.getElementById('name-player-bottom').textContent = `You (${isWhite ? 'White ⚪' : 'Black ⚫'})`;
-        document.getElementById('tag-player-bottom').textContent = `(${myTag})`;
-        if (ratingBotEl) ratingBotEl.textContent = '1500';
+        document.getElementById('tag-player-bottom').textContent = `(${myTag} • ${myElo})`;
+        if (ratingBotEl) ratingBotEl.textContent = String(myElo);
         appState.boardFlipped = !isWhite;
       } else {
         if (badge) badge.textContent = 'Pawns & Paws';
@@ -2202,6 +2288,7 @@
       playSoundEffect('click');
       if (id === 'modal-pgn-fen') syncIOModalFields();
       if (id === 'modal-stats') updateStatsModalUI();
+      if (id === 'modal-online') updateOnlineEloUI();
       const el = document.getElementById(id);
       if (el) el.classList.remove('hidden');
     }
@@ -2251,6 +2338,11 @@
     }
 
     function updateStatsModalUI() {
+      const elo = appState.stats.onlineElo || 200;
+      const eloEl = document.getElementById('stat-online-elo');
+      if (eloEl) eloEl.textContent = String(elo);
+      const lobbyEloEl = document.getElementById('online-lobby-elo');
+      if (lobbyEloEl) lobbyEloEl.textContent = `${elo} ELO`;
       document.getElementById('stat-games-played').textContent = String(appState.stats.gamesPlayed);
       document.getElementById('stat-wins').textContent = String(appState.stats.wins);
       document.getElementById('stat-captures').textContent = String(appState.stats.captures);
@@ -2258,10 +2350,11 @@
     }
 
     function resetPlayerStats() {
-      appState.stats = { gamesPlayed: 0, wins: 0, captures: 0, puzzlesSolved: 0 };
+      appState.stats = { gamesPlayed: 0, wins: 0, captures: 0, puzzlesSolved: 0, onlineElo: 200, onlineGames: 0, onlineWins: 0 };
       savePersistedState();
       updateStatsModalUI();
-      showToast('🏆 Statistics reset.');
+      updateOnlineEloUI();
+      showToast('🏆 Statistics reset (Online ELO reset to 200).');
     }
 
     function initKeyboardControls() {
@@ -2305,7 +2398,8 @@
           captureStyle: appState.captureStyle,
           custom: appState.custom,
           audio: appState.audio,
-          stats: appState.stats
+          stats: appState.stats,
+          cameraLocked: (typeof appState.cameraLocked === 'boolean') ? appState.cameraLocked : true
         }));
       } catch (e) {}
     }
@@ -2319,7 +2413,15 @@
         if (parsed.captureStyle) appState.captureStyle = parsed.captureStyle;
         if (parsed.custom) Object.assign(appState.custom, parsed.custom);
         if (parsed.audio) Object.assign(appState.audio, parsed.audio);
-        if (parsed.stats) Object.assign(appState.stats, parsed.stats);
+        if (typeof parsed.cameraLocked === 'boolean') {
+          appState.cameraLocked = parsed.cameraLocked;
+        }
+        if (parsed.stats) {
+          Object.assign(appState.stats, parsed.stats);
+          if (typeof appState.stats.onlineElo !== 'number' || isNaN(appState.stats.onlineElo) || appState.stats.onlineElo <= 0) {
+            appState.stats.onlineElo = 200;
+          }
+        }
       } catch (e) {}
     }
 
@@ -2338,6 +2440,7 @@
       renderMoveHistoryTable();
       updateCapturedPiecesAndMaterialUI();
       updateGameStatusBanner();
+      updateOnlineEloUI();
       switchScreenView('home');
 
       appState.clock.lastTickPerf = performance.now();

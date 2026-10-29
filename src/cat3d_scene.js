@@ -3048,13 +3048,14 @@
       // Spawn white Paw-Print Decals along the move path (like Reference 3: 1000756618.jpg!)
       spawnPawPrintTrailOnBoard(fromPos, toPos);
 
-      // Every move (normal moves AND captures) uses the 3D POV camera transition
-      const use3DPovTransition = (camState.followMoves !== false);
+      // Action POV swoop only triggers if the camera is locked to board view
+      // In Movable mode (!cameraLocked), preserve player's custom POV without snapping away
+      const use3DPovTransition = Boolean(camState.followMoves !== false && camState.cameraLocked);
       // Snappy yet cinematic duration so the player sees the cat coil, pounce across tiles, and strike!
       let baseDuration = isCapture ? 1350 : 950;
       baseDuration = Math.max(480, baseDuration / speedMult);
 
-      // AUTOMATIC OVER-THE-SHOULDER 3D ACTION POV ON EVERY MOVE & ATTACK!
+      // AUTOMATIC OVER-THE-SHOULDER 3D ACTION POV ON EVERY MOVE & ATTACK (Only in Locked Board Mode)!
       if (use3DPovTransition) {
         if (!camState.savedPreCapture) {
           camState.savedPreCapture = {
@@ -3088,15 +3089,15 @@
         // Dynamic close-in radius framing the cat and target pieces
         camState.desiredRadius = Math.min(5.6, Math.max(3.4, moveDist * 0.85 + 1.8));
         camState.lerpSpeed = 0.26; // Snappy, exciting camera swoop
+      }
 
-        const banner = document.getElementById('hud-capture-banner');
-        if (banner) {
-          const attName = CAT_BREED_INFO[moveObj.piece]?.name || 'Plaza Cat';
-          banner.textContent = isCapture
-            ? `⚔️ ${attName} Captures on ${moveObj.to.toUpperCase()}!`
-            : `🐾 ${attName} ➔ ${moveObj.to.toUpperCase()}`;
-          banner.classList.remove('hidden');
-        }
+      const banner = document.getElementById('hud-capture-banner');
+      if (banner) {
+        const attName = CAT_BREED_INFO[moveObj.piece]?.name || 'Plaza Cat';
+        banner.textContent = isCapture
+          ? `⚔️ ${attName} Captures on ${moveObj.to.toUpperCase()}!`
+          : `🐾 ${attName} ➔ ${moveObj.to.toUpperCase()}`;
+        banner.classList.remove('hidden');
       }
 
       if (isCapture) {
@@ -3675,13 +3676,15 @@
           }
         }
 
-        // Return Camera Smoothly to saved overview view at end of move
+        // Return Camera Smoothly to saved overview view at end of move (only in lock mode)
         if (rawT >= 0.88 && camState.savedPreCapture) {
-          camState.lerpSpeed = 0.12;
-          camState.desiredTheta = camState.savedPreCapture.theta;
-          camState.desiredPhi = Math.max(0.98, camState.savedPreCapture.phi);
-          camState.desiredRadius = camState.savedPreCapture.radius;
-          camState.desiredTarget.copy(camState.savedPreCapture.target);
+          if (camState.cameraLocked) {
+            camState.lerpSpeed = 0.12;
+            camState.desiredTheta = camState.savedPreCapture.theta;
+            camState.desiredPhi = camState.savedPreCapture.phi;
+            camState.desiredRadius = camState.savedPreCapture.radius;
+            camState.desiredTarget.copy(camState.savedPreCapture.target);
+          }
           camState.savedPreCapture = null;
         }
 
@@ -3826,6 +3829,9 @@
       if (btnAuto) btnAuto.classList.toggle('active-pill', mode === 'overheadAuto');
       if (btnDio) btnDio.classList.toggle('active-pill', mode === 'diorama3d');
 
+      // In Movable mode (!cameraLocked), preserve the player's custom camera angle & zoom
+      if (!camState.cameraLocked) return;
+
       if (mode === 'overheadAuto') {
         camState.desiredTheta = appState.boardFlipped ? Math.PI : 0;
         camState.desiredPhi = 1.04;   // Fixed, crystal-clear 3D gameboard view
@@ -3842,8 +3848,14 @@
     }
 
     // Toggle between Fixed Board Lock (🔒) and Free Movable/Zoom Mode (🔓)
-    function setCameraLockMode(isLocked) {
+    function setCameraLockMode(isLocked, quiet = false) {
       camState.cameraLocked = isLocked;
+      if (typeof appState !== 'undefined') {
+        appState.cameraLocked = isLocked;
+        if (typeof savePersistedState === 'function') savePersistedState();
+      }
+      camState.savedPreCapture = null;
+
       const btnLock = document.getElementById('btn-cam-lock');
       const btnMovable = document.getElementById('btn-cam-movable');
       if (btnLock && btnMovable) {
@@ -3861,18 +3873,19 @@
         camState.desiredTheta = (typeof appState !== 'undefined' && appState.boardFlipped) ? Math.PI : 0;
         camState.desiredRadius = 12.8;
         camState.desiredTarget.set(0, 0.25, 0);
-        showToast('🔒 Gameboard View Locked');
+        if (!quiet) showToast('🔒 Gameboard View Locked');
       } else {
-        showToast('🔓 Movable: Drag board to orbit, scroll or pinch to zoom!');
+        if (!quiet) showToast('🔓 Movable: Drag board to orbit, scroll or pinch to zoom!');
       }
-      playSoundEffect('click');
+      if (!quiet) playSoundEffect('click');
     }
     window.setCameraLockMode = setCameraLockMode;
 
     function bind3DCanvasEvents(domElem) {
       domElem.addEventListener('contextmenu', (e) => e.preventDefault());
       domElem.style.touchAction = 'none';
-      camState.cameraLocked = true; // Default to locked gameboard view
+      const initialLocked = (typeof appState !== 'undefined' && typeof appState.cameraLocked === 'boolean') ? appState.cameraLocked : true;
+      setCameraLockMode(initialLocked, true);
 
       domElem.addEventListener('pointerdown', (e) => {
         ensureAudioContext();

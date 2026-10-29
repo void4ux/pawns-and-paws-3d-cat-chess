@@ -247,6 +247,11 @@
       height: 100%;
       touch-action: none;
     }
+    #canvas-3d-container canvas {
+      display: block !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
     ::-webkit-scrollbar {
       width: 5px;
       height: 5px;
@@ -605,12 +610,12 @@
           <div class="min-w-0">
             <div class="flex items-center gap-1.5">
               <span id="name-player-bottom" class="font-bold text-sm text-[#e8e6e3] truncate">checknimga</span>
-              <span id="tag-player-bottom" class="text-xs text-[#9e9c98] font-medium">(1500)</span>
+              <span id="tag-player-bottom" class="text-xs text-[#9e9c98] font-medium">(200)</span>
               <span id="flag-player-bottom" class="text-xs leading-none" title="Country">🇮🇳</span>
             </div>
             <div class="flex items-center gap-1.5 mt-0.5">
               <svg class="w-3.5 h-3.5 text-[#81b64c] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
-              <span id="rating-badge-bottom" class="text-xs font-extrabold text-white">1500</span>
+              <span id="rating-badge-bottom" class="text-xs font-extrabold text-white">200</span>
               <div id="captured-by-bottom" class="text-xs text-[#b8b6b2] tracking-tighter truncate ml-1"></div>
               <span id="adv-bottom" class="text-xs font-bold text-[#a1a09d]">+0</span>
             </div>
@@ -1011,6 +1016,10 @@
             <p class="text-xs text-zinc-400">
               Host creates a code to start a game • Friend uses that code to join instantly
             </p>
+            <div class="flex items-center gap-2 mt-1">
+              <span class="text-xs text-zinc-400">Your Online Rating:</span>
+              <span id="online-lobby-elo" class="text-xs font-extrabold text-[#81b64c] bg-[#81b64c]/10 px-2 py-0.5 rounded border border-[#81b64c]/30 font-mono-code">200 ELO</span>
+            </div>
           </div>
         </div>
         <button id="btn-close-online" onclick="closeModal('modal-online')" class="cc-btn px-3 py-1 text-xs font-bold hover:bg-red-500/20 hover:text-red-300">✕ Close</button>
@@ -1356,7 +1365,8 @@
         <h3 class="text-base font-bold text-white">Player Statistics</h3>
         <button id="btn-close-stats" onclick="closeModal('modal-stats')" class="cc-btn px-3 py-1 text-xs font-bold">✕ Close</button>
       </div>
-      <div class="grid grid-cols-2 gap-2 text-center">
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center">
+        <div class="cc-subpanel p-3"><div id="stat-online-elo" class="font-mono-code text-xl font-bold text-[#81b64c]">200</div><div class="text-[11px] text-zinc-400">Online ELO</div></div>
         <div class="cc-subpanel p-3"><div id="stat-games-played" class="font-mono-code text-xl font-bold text-white">0</div><div class="text-[11px] text-zinc-400">Games</div></div>
         <div class="cc-subpanel p-3"><div id="stat-wins" class="font-mono-code text-xl font-bold text-[#81b64c]">0</div><div class="text-[11px] text-zinc-400">Wins</div></div>
         <div class="cc-subpanel p-3"><div id="stat-captures" class="font-mono-code text-xl font-bold text-sky-400">0</div><div class="text-[11px] text-zinc-400">Captures</div></div>
